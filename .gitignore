@@ -7,6 +7,9 @@ dist
 # SQLite database and backups
 data/
 
+# The planning doc (see DESIGN.md's intro): kept local, it has personal details and the repo is public
+Personal Task*Spec*.md
+
 .DS_Store
 .vscode/*
 !.vscode/extensions.json

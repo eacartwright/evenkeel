@@ -1,8 +1,9 @@
 # Evenkeel — design
 
-The spec lives here; the code points at its sections (`DESIGN.md §5.3`). The longer planning
-doc (*Personal Task & Notes System — Spec*, a Claude Doc) has the background, the AI prompts and
-the name list; this file is what's built and decided. Update it when a decision changes.
+The spec lives here; the code points at its sections (`DESIGN.md §5.3`). It says what's built
+and decided, and (§6–8, §10) what's planned for later phases. Update it when a decision changes.
+The planning doc it grew from (*Personal Task & Notes System — Spec v0.1*, Oct 2026) has been
+merged in; the original stays out of the repo (it's ignored) for the name list and the history.
 
 ## 1. Purpose
 
@@ -16,7 +17,27 @@ down and stop carrying them. Three promises, and a test for every feature:
    shift; nothing turns red; counts are information, not alarms.
 
 Does it help nothing get lost, nothing stay foggy, or nothing nag? If not, it's feature creep.
-Built for one person: no teams, sharing or invites.
+
+Why it works: unfinished intentions keep pulling at attention until they're done or handed to a
+system you trust, and making a concrete plan is enough to quiet them (Masicampo and Baumeister,
+2011). The app is the ship's hold: everything stowed and secured, so the deck stays clear.
+
+- **Built for one person.** No teams, sharing, invites or monetization.
+- **Notes and tasks are the same object** (§4.1): one can become the other as it evolves.
+- **AI proposes, I decide.** It extracts, questions, estimates and suggests; nothing is
+  committed without a tap.
+- **Review beats writing.** The usual move is answering a question or approving a suggestion,
+  not filling in fields.
+- **No guilt UI.** Missed things shift or fade; nothing sits in red.
+- **Portable data.** Notes end up as plain Markdown files (phase 4).
+- **Fast.** Open and take a capture in under two seconds on the phone.
+
+**Scope.** v1 replaces Todoist's personal, Reminders and Back Burner projects; work tasks stay in
+sideshow for now. Eventually: steps, recurrence, deadlines, durations, dependencies; quick add,
+voice rambles, AI extraction; clarify and breakdown; chores on flexible cadences; push to
+Android; scheduling into one Google Calendar; notes with attachments, folders and tags.
+**Out:** native apps (PWA only, §10), anything multi-user, email, chat, a backlinks graph,
+plugins, and sideshow's ConnectWise workflows.
 
 ## 2. Stack
 
@@ -29,9 +50,16 @@ port 8083, `https://evenkeel.evans.tools` behind Cloudflare Access (docs/runbook
 
 1. **Capture and clarify.** Items, inbox, typed capture, Today, All, item pages, PWA install
    (**built 2026-11-07**); then voice rambles with AI extraction and the clarify interview (next).
-2. **Chores and reminders.** Cadences with freshness instead of overdue, Web Push, Todoist import.
-3. **Planning and calendar.** "I have time this weekend", estimates, one Google Calendar.
-4. **Notes.** Markdown view, attachments, folders/tags, notes as `.md` files, Obsidian import.
+   *Done when* a 10-minute ramble becomes reviewed inbox items, and a vague admin task has a
+   next action and a "have ready" checklist.
+2. **Chores and reminders** (§6). Cadences with freshness instead of overdue, Web Push, Todoist
+   import. *Done when* the Sunday chores run here for 3 weeks and Todoist isn't opened.
+   Todoist gets cancelled after this phase.
+3. **Planning and calendar** (§7). "I have time this weekend", estimates, one Google Calendar.
+   *Done when* a weekend plan is proposed, accepted, and shows up in Google Calendar.
+4. **Notes** (§8). Markdown view, attachments, folders/tags, notes as `.md` files, Obsidian
+   import. *Done when* a home project (the kitchen renovation) lives here as one note with its
+   tasks.
 
 ## 4. Records
 
@@ -70,6 +98,22 @@ No priority flags. Three tiers I'll actually respect, and the inbox before them:
 `settings` has one record, `app`: the areas list. Colors are per device (localStorage).
 Dev notes (🧪, as in foodlab) are notes about the app itself, with the page they were written on,
 mirrored to `data/dev-notes.md` for the next build session.
+
+### 4.4 Planned records
+
+Added with the phase that needs them (each a new migration in server `db.ts`):
+
+| Table | Holds | Phase |
+| --- | --- | --- |
+| `captures` | Raw input: typed text or audio, transcript, source (quick add, ramble), processed | 1 |
+| `proposals` | AI suggestions awaiting review: kind (new item, split, question, schedule), payload, pending / accepted / rejected | 1 |
+| `questions` | Clarify questions on an item, with my answers | 1 |
+| `cadences` | Chore rules: item, interval, tolerance, preferred day, last done, history (§6) | 2 |
+| `push_subscriptions` | Web Push endpoint and keys per device | 2 |
+| `calendar_links` | Item ↔ Google Calendar event, sync state | 3 |
+| `attachments` | File, type, item | 4 |
+
+Tags (phase 4) get a join table.
 
 ## 5. Screens
 
@@ -121,6 +165,9 @@ No reds. Rows are tight, one line where the title fits; back-burner items and no
 Search looks in title, next step, notes and area, and into steps (a matching step shows its
 top-level item). Area filter, "Finished too".
 
+Three is a first, dumb version of the planner (§7): when estimates, energy and a time window
+exist, it should pick by those instead of a shuffle.
+
 ### 5.5 Item (`/items/<id>`)
 
 Title with its box; the **Next step** box up top (the clarify interview will fill it); Kind
@@ -135,15 +182,119 @@ Reuses foodlab's AI module (Claude and GPT, cost in `ai_usage`, monthly cap). Bo
 
 - **Ramble**: hold the mic, record; the server transcribes (OpenAI, the key foodlab has);
   the model extracts candidate items (title, kind, area, tier, dates, duplicate-of, the quote);
-  the inbox shows them to keep, edit or discard.
+  the inbox shows them to keep, edit or discard. The raw transcript stays with its capture.
 - **Clarify**: on any item, 3–6 questions, then a next step, steps with estimates, a "have
-  ready" list, and unknowns as "find out" steps.
+  ready" list, and unknowns as "find out" steps. "Don't know" is a fine answer: it becomes a
+  step. Then accept all, edit, or reject.
 
-The prompts are in the planning doc.
+One function per job, each returning JSON that's checked before it becomes a proposal. A fast
+model for extraction, a stronger one for clarify and planning. Every call gets a short context:
+today's date, the areas, and the titles of open items in the same area (to catch duplicates).
+
+**Extract (ramble → items)**
+
+```text
+You turn a rambling voice transcript into discrete candidate items for a personal task system.
+
+Rules:
+- One item per distinct thing to do, remember, or think about. Don't merge unrelated things.
+- Write titles as short imperatives ("Call the dentist to move the cleaning"), under 70 characters.
+- Classify kind: task | project (needs several steps) | chore (recurs) | note (idea or info, no action).
+- Suggest area from: {areas}. Suggest tier: hard if a real deadline is mentioned, chip if ongoing, back if vague or someday.
+- Pull any dates, durations or people mentioned into fields; never invent them.
+- If an item likely duplicates one in EXISTING, set duplicate_of to its id.
+- Keep the speaker's own words in source_quote so he can recognize it.
+
+EXISTING: {open_item_titles_with_ids}
+TODAY: {date}
+TRANSCRIPT: {transcript}
+
+Return JSON: {"items":[{"title","kind","area","tier","deadline","est_minutes","duplicate_of","source_quote"}]}
+```
+
+**Clarify (one item → a plan)**
+
+```text
+You help a person who finds it hard to start vague tasks. Your job is to make this item concrete enough that the first step takes no thinking.
+
+Item: {title}
+Notes so far: {body}
+Previous answers: {qa_pairs}
+
+Step 1 - If key facts are missing, ask 3 to 6 questions. Prefer questions he can answer from memory in a few words. Include questions about what information or documents the task will need (account numbers, dates, contact names, what outcome he wants).
+Step 2 - Draft a breakdown:
+- next_action: one physical, visible step under 15 minutes.
+- subtasks: ordered, each completable in one sitting, with est_minutes.
+- have_ready: things to gather before a call or appointment.
+- unknowns: answers he didn't know, each phrased as a small "find out" subtask.
+- is_project: true if this needs more than 4 subtasks or spans weeks.
+Don't pad. Fewer, clearer steps beat many.
+
+Return JSON: {"questions":[...],"next_action","subtasks":[{"title","est_minutes","blocked_by_index"}],"have_ready":[...],"unknowns":[...],"is_project"}
+```
+
+*Example* (made up): "Renew passport". Questions: when does it expire, any trips booked, is the
+old one at hand, has your name changed? Next action: "Find the old passport and check its expiry
+date (5 min)". Have ready: old passport, a photo, a payment card, the trip dates.
 
 ### 5.7 Settings (⚙️)
 
 Colors (per device); Areas, one per line. Things in an area keep it if it's taken off the list.
+
+## 6. Chores and reminders (phase 2, planned)
+
+### 6.1 Freshness, not due dates
+
+A chore tracks time since it was last done against a target interval, instead of a fixed date
+that goes red. A missed Sunday just means it's a bit staler; the next due point moves from when
+it was actually done.
+
+- **Rule:** an interval in days plus a tolerance. Sheets: every 21 days, ± 4. Trash: every 7,
+  preferred day Sunday.
+- **Freshness** = days since last done ÷ interval. Under 0.8 fresh (hidden), 0.8–1.0 due soon,
+  over 1.0 due, over 1.5 stale.
+- **Shown as** "Sheets: 18 days (usually 21)" with a small bar. No red dates, no "yesterday".
+- **Done** resets the clock; **Skip** resets it without counting as done (logged apart);
+  **Snooze** hides it for some days.
+- **Preferred day** (optional): the chore surfaces that morning when it's due or nearly.
+- **Hard schedules stay exact.** Bills, medication, anything time-critical uses a fixed
+  recurrence and normal reminders, not freshness.
+- **Batching:** a "Sunday reset" can be one item whose steps each have their own cadence.
+
+### 6.2 Notifications
+
+Web Push from the installed PWA; the server decides when, the phone only receives.
+
+- VAPID keys once; the service worker subscribes and posts to `/api/push/subscribe`; sent with
+  the `web-push` package.
+- A loop in the server checks every minute and records what it sent, so a restart doesn't
+  send twice.
+- **What notifies:** explicit reminders, hard deadlines (that morning, plus a lead time I set),
+  preferred-day chores that are due, and maybe one morning summary. Nothing else by default.
+- **In the notification:** Done and Snooze 1 h, handled without opening the app.
+- Needs HTTPS (Cloudflare has it), the server always on, and Chrome exempt from battery
+  optimization on the phone. If Web Push proves unreliable, send to a self-hosted ntfy topic
+  instead (same scheduler, different sender).
+
+## 7. Planning and calendar (phase 3, planned)
+
+**"I have time this weekend."** In: a time window, optionally energy and where I am (home,
+out). Candidates: open items with a next step, ranked by deadline pressure, how long a chip item
+has gone untouched, chores near due, and quick wins that fit gaps. Out: 3–8 suggestions, each with
+a one-line reason ("due Nov 3", "untouched 3 weeks", "20 min, fits after laundry"), the total
+time and an order. Accepted ones get planned (`scheduled`) and, with sync, a calendar event.
+
+**Google Calendar**, one calendar (the three leftover Todoist calendars go first). OAuth for one
+user. Busy time feeds the planner; planned items become events tagged with the item id; moving
+or deleting the event updates the item on the next sync.
+
+## 8. Notes (phase 4, planned)
+
+A Markdown editor with live preview (CodeMirror 6 or Milkdown), pasted images, PDFs as
+attachments. Folders are real directories under `notes/`; tags in frontmatter. A note can turn
+selected lines into tasks that stay linked to it. Full-text search with SQLite FTS5. Import from
+Obsidian (copy the folder), OneNote and Evernote later. `notes/` and attachments sit beside the
+database, and the nightly backup covers them.
 
 ## 9. Sync
 
@@ -153,8 +304,35 @@ last write wins, sent in first-changed order (a parent before its new step). `GE
 returns everything with ETag = rev. A 4xx drops the record with a toast; network errors retry.
 `X-Evenkeel-Build` tells an old installed app to offer ↻ Update. Deletions are tombstones.
 
-## 10. Later, maybe
+## 10. Platform
 
-Shared AI module with sideshow and foodlab; Gmail read-only lookups; a weekly review; a
-Capacitor shell for Android if widgets or offline reminders are missed (planning doc,
-"Platform strategy").
+A PWA. The costly parts (data, server logic, AI, sync, scheduling) live on the server and in
+`shared`, so a platform change only touches the UI, and Capacitor could wrap it without a
+rewrite.
+
+What a PWA can't do on Android: home-screen widgets; capture from outside the app (no
+quick-settings tile, lock-screen capture or voice assistant; the share sheet and long-press
+shortcuts do work); offline reminders (every reminder is a push, so a down server or an offline
+phone misses it); reliable background work (no location reminders, no recording with the
+screen off); dependable badge counts.
+
+Options, least to most effort: the **PWA** (now); **Capacitor** for Android (the same React app
+in a native shell, an APK outside the Play Store: offline scheduled notifications, share intents,
+background tasks; a widget or tile needs a little Kotlin); a Trusted Web Activity (gains almost
+nothing; skip); React Native or Kotlin (only if it outgrows personal scope).
+
+To keep Capacitor cheap: logic stays on the server or in `shared`, and every browser-specific
+feature (notifications, recording, sharing, offline storage) goes through one `platform` module.
+**Decision point:** after about a month of phase 2, wrap it if widgets or offline reminders are
+missed (the same rule as foodlab).
+
+## 11. Later, maybe
+
+Shared AI module with sideshow and foodlab; Gmail read-only lookups; a weekly review.
+
+**Open questions**
+
+- Todoist import: everything, or only Back Burner and Reminders?
+- Does sideshow's work inbox eventually merge here, or stay separate with a shared AI module?
+- A morning push summary, or is that noise?
+- Areas: keep the starting list, or let the AI propose from the first rambles?
