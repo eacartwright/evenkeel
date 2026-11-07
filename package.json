@@ -1,0 +1,20 @@
+{
+  "name": "evenkeel",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c cyan,magenta \"npm run dev -w @evenkeel/server\" \"npm run dev -w @evenkeel/web\"",
+    "build": "npm run build -w @evenkeel/web",
+    "start": "npm run start -w @evenkeel/server",
+    "test": "vitest run",
+    "typecheck": "tsc -p packages/shared && tsc -p packages/server && tsc -p packages/web"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}

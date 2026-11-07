@@ -1,0 +1,15 @@
+node_modules
+dist
+*.log
+*.local
+.env
+
+# SQLite database and backups
+data/
+
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# Windows shortcuts are per machine (e.g. the mini PC's "Update evenkeel" shortcut)
+*.lnk
