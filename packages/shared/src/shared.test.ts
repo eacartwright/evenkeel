@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, blank, captureLines, cleanLine, countLines, dayLabel, daysBetween, emptyState, fromShared, Invalid, minutesLabel, validators, View, type Item, type State } from "./index";
+import { addDays, blank, captureLines, cleanLine, countLines, dayLabel, daysBetween, emptyState, fromShared, Invalid, minutesLabel, NO_AREA, validators, View, type Item, type State } from "./index";
 
 const NOW = 1_700_000_000_000;
 
@@ -190,5 +190,46 @@ describe("View", () => {
     const s = state([{ area: "Car" }, { area: "home" }]);
     s.settings.app = { ...blank.settings(0), areas: ["Home", "Health"] };
     expect(new View(s).areas()).toEqual(["Home", "Health", "Car"]);
+  });
+
+  it("groups by area, A-Z with no area last, and filters to no area", () => {
+    const v = new View(state([{ id: "a", tier: "chip", area: "Work" }, { id: "b", tier: "back", area: "home" }, { id: "c", tier: "chip", area: "Home" }, { id: "d", tier: "chip" }]));
+    expect(v.byArea().map((g) => [g.area.toLowerCase(), g.items.map((i) => i.id).sort()])).toEqual([["home", ["b", "c"]], ["work", ["a"]], ["", ["d"]]]);
+    expect(v.all({ area: NO_AREA }).flatMap((g) => g.items.map((i) => i.id))).toEqual(["d"]);
+  });
+
+  it("gives each area in use a stable color, whatever its case", () => {
+    const v = new View(state([{ id: "w", area: "Work" }, { id: "h", area: "Home" }, { id: "s", area: "home" }]));
+    expect(v.areaColor("Home")).toBe(0);
+    expect(v.areaColor("HOME")).toBe(0);
+    expect(v.areaColor("Work")).toBe(1);
+    expect(v.areaColor("")).toBeNull();
+  });
+
+  it("offers a project's first open step, never the back burner, notes or anything waiting", () => {
+    const v = new View(
+      state([
+        { id: "p", tier: "chip", area: "Home" },
+        { id: "s1", parentId: "p", tier: "chip", status: "done", position: 1 },
+        { id: "s2", parentId: "p", tier: "chip", position: 2 },
+        { id: "t", tier: "chip", area: "Work" },
+        { id: "b", tier: "back" },
+        { id: "n", tier: "chip", status: null },
+        { id: "i" },
+        { id: "w", tier: "chip", blockedBy: ["t"] },
+      ]),
+    );
+    expect(v.doable().map((i) => i.id).sort()).toEqual(["s2", "t"]);
+    expect(v.doable("Home").map((i) => i.id)).toEqual(["s2"]);
+    expect(v.areaOf(v.item("s2")!)).toBe("Home");
+  });
+
+  it("picks the same few for a day, and skipped ones only when nothing else is left", () => {
+    const v = new View(state(["a", "b", "c", "d", "e"].map((id) => ({ id, tier: "chip" as const }))));
+    const first = v.pick("2026-11-07", 3).map((i) => i.id);
+    expect(first).toHaveLength(3);
+    expect(v.pick("2026-11-07", 3).map((i) => i.id)).toEqual(first);
+    expect(v.pick("2026-11-07", 3, "", [first[0]!]).map((i) => i.id)).not.toContain(first[0]);
+    expect(v.pick("2026-11-07", 5, "", [first[0]!]).at(-1)!.id).toBe(first[0]);
   });
 });

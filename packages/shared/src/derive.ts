@@ -8,6 +8,20 @@ const byPosition = (a: Item, b: Item) => a.position - b.position || a.createdAt 
 export const isOpen = (i: Item) => !i.deleted && i.status === "open";
 export const isNote = (i: Item) => i.status === null;
 
+/** The area filter's value for "filed without an area". */
+export const NO_AREA = "-";
+/** How many area colors styles.css has (--area-0…). */
+export const AREA_COLORS = 12;
+
+const matchesArea = (i: Item, area: string) => !area || (area === NO_AREA ? !i.area : i.area.toLowerCase() === area.toLowerCase());
+
+/** A stable number for a string (FNV-1a), so a day's shuffle stays put between visits. */
+function hash(s: string): number {
+  let h = 2166136261;
+  for (let n = 0; n < s.length; n++) h = Math.imul(h ^ s.charCodeAt(n), 16777619);
+  return h >>> 0;
+}
+
 /** What Today shows (DESIGN.md §5.3). */
 export interface TodayView {
   /** Planned for today. */
@@ -27,6 +41,7 @@ export interface Progress {
 
 export class View {
   private kids = new Map<Id | null, Item[]>();
+  private colors: Map<string, number> | undefined;
 
   constructor(readonly state: State) {
     for (const i of Object.values(state.items)) {
@@ -164,7 +179,7 @@ export class View {
       (i) =>
         i.tier !== "inbox" &&
         (withDone || i.status === "open" || i.status === null) &&
-        (!area || i.area.toLowerCase() === area.toLowerCase()) &&
+        matchesArea(i, area) &&
         (!terms.length || matches(i)),
     );
     const groups: { tier: Tier | "notes"; items: Item[] }[] = [
@@ -174,5 +189,61 @@ export class View {
       { tier: "notes", items: top.filter(isNote).sort((a, b) => b.updatedAt - a.updatedAt) },
     ];
     return groups.filter((g) => g.items.length);
+  }
+
+  /** The same items by area (A–Z, no area last), tiers in All's order within each. */
+  byArea(filter: { q?: string; area?: string; withDone?: boolean } = {}): { area: string; items: Item[] }[] {
+    const groups = new Map<string, { area: string; items: Item[] }>();
+    for (const i of this.all(filter).flatMap((g) => g.items)) {
+      const key = i.area.toLowerCase();
+      const g = groups.get(key) ?? { area: i.area, items: [] };
+      g.items.push(i);
+      groups.set(key, g);
+    }
+    return [...groups.values()].sort((a, b) => (!a.area ? 1 : !b.area ? -1 : a.area.localeCompare(b.area)));
+  }
+
+  /** The area an item counts under: a step's is its top-level item's. */
+  areaOf(i: Item): string {
+    return this.ancestors(i.id)[0]?.area ?? i.area;
+  }
+
+  /** Which area color (0…) an area gets: its place among the areas in use, A–Z. Null for none. */
+  areaColor(area: string): number | null {
+    if (!area) return null;
+    if (!this.colors) {
+      const used = new Set(Object.values(this.state.items).filter((i) => !i.deleted && !i.parentId && i.area).map((i) => i.area.toLowerCase()));
+      this.colors = new Map([...used].sort().map((a, n) => [a, n % AREA_COLORS]));
+    }
+    return this.colors.get(area.toLowerCase()) ?? null;
+  }
+
+  /**
+   * What could be done next (DESIGN.md §5.4): hard and chip items, not waiting on anything. A
+   * project offers its first open step rather than the whole of itself; the back burner and notes
+   * aren't offered.
+   */
+  doable(area = ""): Item[] {
+    const next = (i: Item): Item | null => {
+      if (!isOpen(i) || this.blocked(i)) return null;
+      const steps = this.children(i.id).filter(isOpen);
+      if (!steps.length) return i;
+      for (const s of steps) {
+        const found = next(s);
+        if (found) return found;
+      }
+      return null;
+    };
+    return this.children_(null)
+      .filter((i) => (i.tier === "chip" || i.tier === "hard") && matchesArea(i, area))
+      .map(next)
+      .filter((i): i is Item => !!i);
+  }
+
+  /** A few doable things, in an order fixed by `seed` (the day). Skipped ones come back only when nothing else is left. */
+  pick(seed: string, n: number, area = "", skipped: readonly Id[] = []): Item[] {
+    const order = this.doable(area).sort((a, b) => hash(seed + a.id) - hash(seed + b.id) || a.id.localeCompare(b.id));
+    const skip = new Set(skipped);
+    return [...order.filter((i) => !skip.has(i.id)), ...order.filter((i) => skip.has(i.id))].slice(0, n);
   }
 }

@@ -3,17 +3,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { blank, Invalid } from "@evenkeel/shared";
-import { loadState, openDb } from "./db";
+import { loadState, openDb, type DB } from "./db";
 import { Store } from "./store";
 
 const dirs: string[] = [];
+const dbs: DB[] = [];
 function fresh() {
   const dir = mkdtempSync(join(tmpdir(), "evenkeel-"));
   dirs.push(dir);
   const db = openDb(join(dir, "t.db"));
+  dbs.push(db);
   return { db, store: new Store(db) };
 }
 afterEach(() => {
+  // Close first: Windows won't delete a database that's still open.
+  for (const db of dbs.splice(0)) db.close();
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 

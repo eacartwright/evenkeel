@@ -104,9 +104,22 @@ The Today count is planned + on deck + deadlines due today or passed.
 
 ### 5.4 All (`/all`)
 
-Everything filed: Hard date, Chipping away, Back burner, Notes. Search looks in title, next
-step, notes and area, and into steps (a matching step shows its top-level item). Area filter,
-"Finished too". Filters live in the address.
+**On trial (2026-11-07).** A long list of equal rows is what makes to-do apps stop working for me:
+too many choices, too much to do. So All has four views to try, and use decides what stays. The
+view is remembered per device and sits in the address (`?v=`), with the filters.
+
+- **Three**: three things and no totals. Hard and chip items that aren't waiting; a project offers
+  its first open step. The day fixes the shuffle. "Something else" swaps one for this session, and
+  passed-over ones return only when nothing else is left. The back burner and notes aren't offered.
+- **Areas** (the default): a tile per area with its count; one open at a time, so only that list is
+  on screen.
+- **Board**: every area at once, in as many columns as fit.
+- **List**: by tier: Hard date, Chipping away, Back burner, Notes.
+
+Areas get a color by their place among the areas in use, A–Z, so adding an area can shift colors.
+No reds. Rows are tight, one line where the title fits; back-burner items and notes are quieter.
+Search looks in title, next step, notes and area, and into steps (a matching step shows its
+top-level item). Area filter, "Finished too".
 
 ### 5.5 Item (`/items/<id>`)
 

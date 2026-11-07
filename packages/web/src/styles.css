@@ -1,6 +1,19 @@
 /* Design tokens. Every color in the app comes from here (same structure as foodlab's and sideshow's). */
 :root {
   color-scheme: light;
+  /* Areas: tell categories apart. No reds; red is for errors and Delete. */
+  --area-0: #1f5fa8;
+  --area-1: #0f766e;
+  --area-2: #3f7d20;
+  --area-3: #6b6a12;
+  --area-4: #9a5b00;
+  --area-5: #7a4b2a;
+  --area-6: #6b3fa0;
+  --area-7: #4f46b5;
+  --area-8: #a1327f;
+  --area-9: #4a5a70;
+  --area-10: #0e7490;
+  --area-11: #86408a;
   --bg: #f3f5f8;
   --surface: #ffffff;
   --surface-2: #e7ebf1;
@@ -35,6 +48,19 @@
 /* Dark: chosen in Settings, or following the system (theme.ts sets data-theme either way). */
 :root[data-theme="dark"] {
   color-scheme: dark;
+  /* Areas: tell categories apart. No reds; red is for errors and Delete. */
+  --area-0: #7fb4f0;
+  --area-1: #5ed0c3;
+  --area-2: #8fd06b;
+  --area-3: #c9c85a;
+  --area-4: #eab15a;
+  --area-5: #cfa17f;
+  --area-6: #b99af0;
+  --area-7: #a3a0f5;
+  --area-8: #ec8fd0;
+  --area-9: #a5b4c8;
+  --area-10: #66cfe6;
+  --area-11: #d79ad9;
   --bg: #0d1117;
   --surface: #151b23;
   --surface-2: #1d2530;
@@ -1723,4 +1749,192 @@ ul.notes li.done .note-text {
   .item-title textarea.title-input {
     flex: 1 1 auto;
   }
+}
+
+/* All's views (DESIGN.md §5.4). --area is set on the element from the area's token. */
+.page.full {
+  max-width: none;
+}
+.all-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+.all-head .page-title {
+  margin: 0;
+}
+.area-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--area, var(--muted));
+  white-space: nowrap;
+}
+.area-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--area, var(--border-strong));
+}
+.area-head {
+  margin: 0 0 4px;
+  padding: 4px 0 4px 8px;
+  border-left: 4px solid var(--area, var(--border-strong));
+  color: var(--area, var(--text));
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+/* Tight rows: one line where the title fits, and the box keeps a thumb-sized target. */
+.item-row.tight {
+  border-radius: 0;
+  gap: 6px;
+  padding: 3px 6px;
+  align-items: flex-start;
+}
+.item-row.tight .item-check {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin: 2px 4px 0 0;
+  border-radius: 5px;
+  font-size: 0.7rem;
+}
+.item-row.tight .item-check::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+.item-row.tight .item-check.note {
+  font-size: 0.8rem;
+}
+.item-row.tight .row-main {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+}
+.item-row.tight .row-name {
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.item-row.tight .row-sub {
+  font-size: 0.78rem;
+}
+.item-row.is-quiet .row-name {
+  color: var(--muted);
+}
+.tight-section {
+  margin-top: 14px;
+}
+.tight-section .section-head {
+  margin-bottom: 2px;
+}
+.tight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+  column-gap: 16px;
+}
+.tight-grid .row + .row {
+  border-top: 0;
+}
+.tight-grid .row {
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+
+/* Board: every area, in as many columns as fit. */
+.board {
+  columns: 270px;
+  column-gap: 16px;
+}
+.board-col {
+  break-inside: avoid;
+  margin-bottom: 14px;
+}
+
+/* Areas: one tile per category. */
+.area-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  gap: 6px;
+}
+.area-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-left: 5px solid var(--area, var(--border-strong));
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.area-tile:hover {
+  background: var(--surface-2);
+}
+.area-tile.on {
+  border-color: var(--area, var(--border-strong));
+  background: var(--surface-2);
+}
+.area-tile-name {
+  font-weight: 700;
+  color: var(--area, var(--text));
+}
+.area-tile-count {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Three: a card each, room to breathe. */
+.three {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.three-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px;
+  border: 1.5px solid var(--border);
+  border-left: 5px solid var(--area, var(--border-strong));
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.three-main {
+  flex: 1;
+  min-width: 0;
+}
+.three-title {
+  display: block;
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.three-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  margin-top: 4px;
+}
+.three-facts .row-sub {
+  white-space: normal;
+}
+.three-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }

@@ -66,10 +66,11 @@ export function Facts({ item, show = {} }: { item: Item; show?: { path?: boolean
 }
 
 /** One item in a list: its box, its title (a link to it) and facts, and any buttons for that list. */
-export function ItemRow({ item, children, show }: { item: Item; children?: ReactNode; show?: Parameters<typeof Facts>[0]["show"] }) {
+export function ItemRow({ item, children, show, tight }: { item: Item; children?: ReactNode; show?: Parameters<typeof Facts>[0]["show"]; tight?: boolean }) {
   const finished = item.status !== null && item.status !== "open";
+  const quiet = tight && (item.tier === "back" || item.status === null);
   return (
-    <div className={`row item-row ${finished ? "is-finished" : ""}`}>
+    <div className={`row item-row ${finished ? "is-finished" : ""} ${tight ? "tight" : ""} ${quiet ? "is-quiet" : ""}`}>
       <Check item={item} />
       <A href={itemPath(item.id)} className="row-main">
         <span className="row-name">{item.title}</span>

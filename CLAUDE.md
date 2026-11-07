@@ -76,5 +76,7 @@ ones. Deletions are tombstones (`deleted`), restorable with Undo or the page's R
   target, settings (areas), dev notes. 24 tests, typecheck, build, and a headless walkthrough
   (capture → file → plan → Today/All, search into steps, Quick add, offline add then sync,
   share, phone layout in dark, Back closing the drawer). Not yet run on NOSTROMO or deployed.
-- **Next:** run it on NOSTROMO; then ramble capture and the clarify interview (DESIGN.md §5.6),
+- 2026-11-07: Master inventory loaded into the HPBROBOOK dev DB (111 items). All now has four views
+  on trial (Three, Areas, Board, List; DESIGN.md §5.4); Evan is trying them to see what works.
+- **Next:** settle the views from use; run it on NOSTROMO; then ramble capture and the clarify interview (DESIGN.md §5.6),
   reusing foodlab's `ai.ts`.
