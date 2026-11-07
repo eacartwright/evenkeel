@@ -187,8 +187,14 @@ Reuses foodlab's AI module (Claude and GPT, cost in `ai_usage`, monthly cap). Bo
   ready" list, and unknowns as "find out" steps. "Don't know" is a fine answer: it becomes a
   step. Then accept all, edit, or reject.
 
-One function per job, each returning JSON that's checked before it becomes a proposal. A fast
-model for extraction, a stronger one for clarify and planning. Every call gets a short context:
+One function per job, each returning JSON that's checked before it becomes a proposal (with Zod,
+as foodlab's `ai.ts` does; `validate.ts` stays hand-written). A fast model for extraction, a
+stronger one for clarify and planning.
+
+Recordings wait on the phone until they're sent, so a ramble on bad signal isn't lost: that's
+audio, which localStorage can't hold, so offline captures move to IndexedDB. (localStorage's
+~5 MB is fine for the synced state for now, 48 KB at 111 items; notes in phase 4 will need
+IndexedDB for that too.) Every call gets a short context:
 today's date, the areas, and the titles of open items in the same area (to catch duplicates).
 
 **Extract (ramble → items)**
