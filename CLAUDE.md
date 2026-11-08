@@ -65,6 +65,9 @@ ones. Deletions are tombstones (`deleted`), restorable with Undo or the page's R
 ## Working with Evan
 
 - Commit and push only when asked.
+- **"Dev notes" means the live ones** on the mini PC (ripley), never this machine's dev DB:
+  read `\\ripley\C\Apps\evenkeel\data\dev-notes.md` (`Z:\Apps\evenkeel\...` on the laptop). Read
+  only; never open the live `.db` over the share.
 - Prefers the Claude desktop app / claude.ai over the terminal; give GUI steps where possible.
 - Develops on NOSTROMO (desktop) and HPBROBOOK (laptop), `C:\Dev\evenkeel`. Phone: Android
   (Pixel 8a). The mini PC will host the real app at `C:\Apps\evenkeel`, port 8083.
