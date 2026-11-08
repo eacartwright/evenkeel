@@ -1,12 +1,11 @@
-import { settingsOf } from "@evenkeel/shared";
 import { useState } from "react";
-import { saveSettings } from "../actions";
+import { addArea, deleteArea, moveArea, renameArea } from "../actions";
 import { FONTS, fontChoice, loaded, setFont, type FontSlot } from "../fonts";
 import { ALL_SANS } from "../fonts-sans";
 import { useData } from "../sync";
 import { setThemePref, themePref, type ThemePref } from "../theme";
 import { Dialog } from "./Dialog";
-import { DraftTextarea, Field, Segmented } from "./controls";
+import { DraftInput, Field, Segmented } from "./controls";
 
 // Settings (DESIGN.md §5.7): sections down the side, as in foodlab, so there's room for more.
 // Areas are app-wide (the settings record); Colors and fonts are per device. Things being tried
@@ -89,29 +88,60 @@ function General() {
   );
 }
 
+/**
+ * The areas (DESIGN.md §5.7): rename one (its items follow; onto another name merges them),
+ * reorder, delete (its items stay, with no area; Undo), or add one. Every area in use is here,
+ * listed or not (one typed by mistake can be merged or deleted); reordering saves them all.
+ */
 function Areas() {
-  const { state } = useData();
-  const areas = settingsOf(state).areas;
+  const { state, view } = useData();
+  const all = view.areas();
+  const [name, setName] = useState("");
+  const count = (a: string) => Object.values(state.items).filter((i) => !i.deleted && !i.parentId && i.area.toLowerCase() === a.toLowerCase()).length;
+  const add = () => {
+    if (!name.trim()) return;
+    addArea(name);
+    setName("");
+  };
   return (
-    <div className="fields">
-      <Field label="Areas">
-        <div className="stack">
-          <DraftTextarea
-            className="input"
-            rows={8}
-            value={areas.join("\n")}
-            onCommit={(text) =>
-              saveSettings({
-                areas: text
-                  .split("\n")
-                  .map((a) => a.trim())
-                  .filter(Boolean),
-              })
-            }
-          />
-          <span className="muted small">One per line, in the order they're offered. Things already in an area keep it if it's taken off the list.</span>
-        </div>
-      </Field>
+    <div className="stack">
+      <p className="muted small">In the order they're offered. Renaming one renames it on everything in it.</p>
+      <ul className="area-list">
+        {all.map((a, at) => {
+          const n = count(a);
+          return (
+            <li key={a}>
+              <DraftInput className="input grow" aria-label={`Area name: ${a}`} value={a} required onCommit={(to) => renameArea(a, to)} />
+              <span className="muted small area-count">
+                {n} item{n === 1 ? "" : "s"}
+              </span>
+              <button className="btn icon subtle small-btn" aria-label={`Move “${a}” up`} disabled={at === 0} onClick={() => moveArea(a, -1)}>
+                ↑
+              </button>
+              <button className="btn icon subtle small-btn" aria-label={`Move “${a}” down`} disabled={at === all.length - 1} onClick={() => moveArea(a, 1)}>
+                ↓
+              </button>
+              <button className="btn icon subtle small-btn" aria-label={`Delete the area “${a}”`} title="Delete (its items stay, with no area)" onClick={() => deleteArea(a)}>
+                ✕
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="inline">
+        <input
+          className="input grow"
+          aria-label="New area"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") add();
+          }}
+        />
+        <button className="btn" disabled={!name.trim()} onClick={add}>
+          Add
+        </button>
+      </div>
     </div>
   );
 }

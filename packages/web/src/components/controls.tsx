@@ -228,3 +228,148 @@ export function Field({ label, children, htmlFor }: { label: string; children: R
     </div>
   );
 }
+
+/** Names that are the same thing: case, punctuation and extra spaces aside. */
+export const nameKey = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
+export interface Option {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+/** Best matches first: names starting with the text, then words starting with it, then containing it. */
+function filterOptions(options: Option[], text: string, limit = 40): Option[] {
+  const t = text.trim().toLowerCase();
+  if (!t) return options.slice(0, limit);
+  const k = nameKey(t);
+  const scored: [number, Option][] = [];
+  for (const o of options) {
+    const l = o.label.toLowerCase();
+    const s = l.startsWith(t) || nameKey(o.label) === k ? 0 : l.includes(` ${t}`) ? 1 : l.includes(t) ? 2 : -1;
+    if (s >= 0) scored.push([s, o]);
+  }
+  return scored
+    .sort((a, b) => a[0] - b[0] || a[1].label.localeCompare(b[1].label))
+    .slice(0, limit)
+    .map(([, o]) => o);
+}
+
+/**
+ * Pick one by typing part of its name (foodlab's Picker). Shows the chosen one's name when idle;
+ * typing filters; Enter or a tap picks the highlighted one. Something new is made only by picking
+ * "+ Add “…”" (when `onCreate` is given): typing alone never makes one.
+ */
+export function Picker({
+  value,
+  options,
+  onChange,
+  onCreate,
+  placeholder = "None",
+  createLabel = "Add",
+  clearable = true,
+  id,
+  "aria-label": ariaLabel,
+}: {
+  value: string | null;
+  options: Option[];
+  onChange: (id: string | null) => void;
+  onCreate?: (text: string) => string;
+  placeholder?: string;
+  createLabel?: string;
+  clearable?: boolean;
+  id?: string;
+  /** Its name when it isn't in a Field (in one, the Field's label is). */
+  "aria-label"?: string;
+}) {
+  const name = useFieldName({ "aria-label": ariaLabel });
+  const selected = options.find((o) => o.id === value);
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [active, setActive] = useState(0);
+  const input = useRef<HTMLInputElement>(null);
+  const listId = useId();
+  const shown = open ? filterOptions(options, text) : [];
+  const exact = shown.some((o) => nameKey(o.label) === nameKey(text));
+  const canCreate = !!onCreate && !!text.trim() && !exact;
+  const total = shown.length + (canCreate ? 1 : 0);
+
+  const pick = (o: Option | "create") => {
+    onChange(o === "create" ? onCreate!(text.trim()) : o.id);
+    setText("");
+    setActive(0);
+    setOpen(false);
+    input.current?.blur();
+  };
+
+  return (
+    <div className={`picker ${open ? "open" : ""}`}>
+      <input
+        id={id}
+        aria-label={ariaLabel}
+        {...name}
+        ref={input}
+        className={`input ${!selected && !open ? "unset" : ""}`}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        placeholder={open ? "Type to find…" : placeholder}
+        value={open ? text : (selected?.label ?? "")}
+        onFocus={() => {
+          setOpen(true);
+          setText("");
+          setActive(0);
+        }}
+        onBlur={() => setOpen(false)}
+        onChange={(e) => {
+          setText(e.target.value);
+          setActive(0);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setActive((a) => Math.min(a + 1, total - 1));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setActive((a) => Math.max(a - 1, 0));
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            if (active < shown.length) pick(shown[active]!);
+            else if (canCreate) pick("create");
+          } else if (e.key === "Escape") {
+            e.stopPropagation();
+            input.current?.blur();
+          }
+        }}
+      />
+      {clearable && selected && !open && (
+        <button className="picker-clear" aria-label="Clear" onClick={() => onChange(null)}>
+          ✕
+        </button>
+      )}
+      {open && total > 0 && (
+        // Keeps the input focused, so the list stays open for the click. Picks on click, not on
+        // touching down: a finger has to be able to drag the list to scroll it.
+        <ul className="picker-list" id={listId} role="listbox" onMouseDown={(e) => e.preventDefault()}>
+          {shown.map((o, n) => (
+            <li key={o.id} role="option" aria-selected={n === active} className={n === active ? "active" : ""} onClick={() => pick(o)}>
+              <span>{o.label}</span>
+              {o.hint && <span className="muted small">{o.hint}</span>}
+            </li>
+          ))}
+          {canCreate && (
+            <li role="option" aria-selected={active === shown.length} className={`create ${active === shown.length ? "active" : ""}`} onClick={() => pick("create")}>
+              + {createLabel} “{text.trim()}”
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}

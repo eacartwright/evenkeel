@@ -255,9 +255,16 @@ date (5 min)". Have ready: old passport, a photo, a payment card, the trip dates
 ### 5.7 Settings (⚙️)
 
 Sections down the side, as in foodlab (the last one opened is remembered): **General**, Colors
-(per device); **Areas**, one per line (things in an area keep it if it's taken off the list);
-**Experimental**, things being tried out: the header and app font pickers (Google Fonts, per
+(per device); **Areas** (below); **Experimental**, things being tried out: the header and app font pickers (Google Fonts, per
 device; temporary, like foodlab's).
+
+**Areas** are one list: Settings' `areas` in order, then any others found on items. Each row has
+its name, how many top-level items use it, ↑ ↓ (saves the whole order, so the others join the
+list) and ✕. **Rename** changes it on every item in it; renaming onto another area's name merges
+the two (a stray "Ch" into Chores). **Delete** takes it off the list and off its items, which stay
+with no area; Undo puts both back. An item's **Area** field is a picker, as foodlab's "Kind of":
+typing filters, Enter or a tap picks, and a new area is made only by choosing **+ Add the area
+"…"** (which also adds it to the list). Inbox's area menu offers the same list.
 
 ## 6. Chores and reminders (phase 2, planned)
 

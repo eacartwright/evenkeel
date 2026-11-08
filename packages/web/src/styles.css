@@ -2036,3 +2036,22 @@ ul.notes li.done .note-text {
   align-items: center;
   gap: 4px;
 }
+/* Settings › Areas: one row per area. */
+.area-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.area-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.area-count {
+  flex: none;
+  min-width: 4.5em;
+  text-align: right;
+}

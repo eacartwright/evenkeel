@@ -1,9 +1,9 @@
 import { dayLabel, ENERGIES, ENERGY_LABEL, lastDone, snoozed, newRepeat, REPEAT_UNITS, repeatLabel, repeatState, TIERS, TIER_LABEL, today, type Item, type Repeat, type RepeatUnit } from "@evenkeel/shared";
 import { useRef, useState } from "react";
-import { createItem, move, remove, schedule, setLastDone, setNote, setRepeat, setStatus, snooze, update } from "../actions";
+import { addArea, createItem, move, remove, schedule, setLastDone, setNote, setRepeat, setStatus, snooze, update } from "../actions";
 import { A, go } from "../router";
 import { useData } from "../sync";
-import { DraftInput, DraftTextarea, Field, NumberInput, Segmented, TitleInput } from "./controls";
+import { DraftInput, DraftTextarea, Field, NumberInput, Picker, Segmented, TitleInput } from "./controls";
 import { Check, ItemRow, itemPath, LaterButton } from "./ItemRow";
 
 /**
@@ -152,7 +152,7 @@ export function ItemPage({ id }: { id: string }) {
                   Back now
                 </button>
               ) : (
-                <LaterButton item={item} />
+                <LaterButton item={item} full />
               ))}
             <button className="btn" onClick={() => setStatus(id, "dropped")} title={item.repeat ? "Not doing it any more (it stops coming back)" : "Not going to do it"}>
               Drop
@@ -329,16 +329,19 @@ function DateInput({ value, onChange, clearable = true, label }: { value: string
   );
 }
 
+/** Pick an area (as foodlab picks a "Kind of"): typing filters; a new one only via "+ Add". */
 function AreaInput({ item, areas }: { item: Item; areas: string[] }) {
+  const value = areas.find((a) => a.toLowerCase() === item.area.toLowerCase()) ?? (item.area || null);
+  const options = value && !areas.includes(value) ? [...areas, value] : areas;
   return (
-    <>
-      <DraftInput className="input" list="area-list" value={item.area} onCommit={(area) => update(item.id, { area })} />
-      <datalist id="area-list">
-        {areas.map((a) => (
-          <option key={a} value={a} />
-        ))}
-      </datalist>
-    </>
+    <Picker
+      value={value}
+      options={options.map((a) => ({ id: a, label: a }))}
+      placeholder="No area"
+      createLabel="Add the area"
+      onCreate={addArea}
+      onChange={(area) => update(item.id, { area: area ?? "" })}
+    />
   );
 }
 

@@ -99,5 +99,9 @@ and a database never runs the same migration twice). An extra migration costs no
   **Later** (snooze: Tomorrow, In 3 days, Next week). Migration 3: `items.repeat`, `log`,
   `one_off`, `snoozed_until`. 37 tests; headless check on a copy of the laptop DB. Not yet: push
   reminders (§6.2; Web Push works for the installed app on Android, no native app needed).
+- 2026-11-08, from Evan's first use on ripley: an item's Area is foodlab's `Picker` (in
+  `controls.tsx`; new only via "+ Add", after a typed "Ch" became an area); Settings → Areas
+  renames (items follow, merging onto an existing name), reorders and deletes areas (Undo).
+  Later is full size on an item's page.
 - **Next:** settle the views from use; run it on NOSTROMO; then ramble capture and the clarify interview (DESIGN.md §5.6),
   reusing foodlab's `ai.ts`.

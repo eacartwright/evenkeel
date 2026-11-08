@@ -165,6 +165,65 @@ export function saveSettings(change: Partial<Settings>) {
   put("settings", { ...s, ...change });
 }
 
+// ---- areas (DESIGN.md §5.7): Settings' list, and the items that use them ----
+
+const sameArea = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const listedAreas = () => settingsOf(data().state).areas;
+/** Items (deleted ones too, so Restore brings them back as they were) in an area. */
+const itemsIn = (area: string) => Object.values(data().state.items).filter((i) => i.area && sameArea(i.area, area));
+
+/** A new area at the end of the list; one already there (or in use) is returned as it's written. */
+export function addArea(name: string): string {
+  const n = name.trim();
+  const known = data().view.areas().find((a) => sameArea(a, n));
+  if (known && listedAreas().some((a) => sameArea(a, known))) return known;
+  saveSettings({ areas: [...listedAreas(), known ?? n] });
+  return known ?? n;
+}
+
+/** A new name for an area, in the list and on every item in it. Renaming onto another merges them. */
+export function renameArea(from: string, to: string) {
+  const name = to.trim();
+  if (!name || name === from) return;
+  const into = data().view.areas().find((a) => sameArea(a, name) && !sameArea(a, from)) ?? name;
+  const listed = listedAreas();
+  const at = listed.findIndex((a) => sameArea(a, from));
+  if (at < 0) {
+    // Only on items so far ("Ch"): onto a listed area, or added to the list.
+    if (!listed.some((a) => sameArea(a, into))) saveSettings({ areas: [...listed, into] });
+  } else {
+    // In the list: renamed in place; if that merges it into another listed one, that one goes.
+    const without = listed.filter((a) => !sameArea(a, into) || sameArea(a, from));
+    saveSettings({ areas: without.map((a) => (sameArea(a, from) ? into : a)) });
+  }
+  for (const i of itemsIn(from)) update(i.id, { area: into });
+}
+
+/** Take an area off the list and off its items (they stay, with no area). Undo puts both back. */
+export function deleteArea(name: string) {
+  const listed = listedAreas();
+  const items = itemsIn(name);
+  saveSettings({ areas: listed.filter((a) => !sameArea(a, name)) });
+  for (const i of items) update(i.id, { area: "" });
+  const n = items.filter((i) => !i.deleted).length;
+  showToast(`Deleted the area “${name}”${n ? ` (${n} item${n === 1 ? "" : "s"} now without one)` : ""}`, {
+    label: "Undo",
+    run: () => {
+      saveSettings({ areas: listed });
+      for (const i of items) update(i.id, { area: i.area });
+    },
+  });
+}
+
+/** Move an area up or down (the order they're offered in). Saves the whole order, so areas only on items join the list. */
+export function moveArea(name: string, by: -1 | 1) {
+  const list = [...data().view.areas()];
+  const at = list.findIndex((a) => sameArea(a, name));
+  if (at < 0 || !list[at + by]) return;
+  [list[at], list[at + by]] = [list[at + by]!, list[at]!];
+  saveSettings({ areas: list });
+}
+
 /** A new dev note, linked to the page it was written on if `withPage`. */
 export function addDevNote(text: string, withPage: boolean, files: Attachment[] = []) {
   const t = text.trim();

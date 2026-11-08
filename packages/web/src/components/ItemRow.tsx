@@ -35,12 +35,16 @@ const LATER: { label: string; days: number }[] = [
   { label: "Next week", days: 7 },
 ];
 
-/** Later (DESIGN.md §6.1): opens into Tomorrow · In 3 days · Next week; picking one puts it off till then. */
-export function LaterButton({ item }: { item: Item }) {
+/**
+ * Later (DESIGN.md §6.1): opens into Tomorrow · In 3 days · Next week; picking one puts it off
+ * till then. Small in a list row; `full` matches the buttons beside it on an item's page.
+ */
+export function LaterButton({ item, full = false }: { item: Item; full?: boolean }) {
   const [open, setOpen] = useState(false);
+  const size = full ? "btn" : "btn small-btn";
   if (!open)
     return (
-      <button className="btn small-btn subtle" title="Not today: back in a few days, without counting as done or skipped" aria-expanded={false} onClick={() => setOpen(true)}>
+      <button className={full ? "btn" : "btn small-btn subtle"} title="Not today: back in a few days, without counting as done or skipped" aria-expanded={false} onClick={() => setOpen(true)}>
         Later
       </button>
     );
@@ -49,7 +53,7 @@ export function LaterButton({ item }: { item: Item }) {
       {LATER.map((l) => (
         <button
           key={l.days}
-          className="btn small-btn"
+          className={size}
           onClick={() => {
             setOpen(false);
             snooze(item.id, addDays(today(), l.days));
@@ -58,7 +62,7 @@ export function LaterButton({ item }: { item: Item }) {
           {l.label}
         </button>
       ))}
-      <button className="btn icon subtle small-btn" aria-label="Never mind" onClick={() => setOpen(false)}>
+      <button className={`btn icon subtle ${full ? "" : "small-btn"}`} aria-label="Never mind" onClick={() => setOpen(false)}>
         ✕
       </button>
     </span>
