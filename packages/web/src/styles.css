@@ -1780,10 +1780,13 @@ ul.notes li.done .note-text {
   border-radius: 50%;
   background: var(--area, var(--border-strong));
 }
+/* A band of the area's own hue: darker in dark, paler in light, since it's the color over the page. */
 .area-head {
   margin: 0 0 4px;
-  padding: 4px 0 4px 8px;
+  padding: 5px 8px 5px 10px;
   border-left: 4px solid var(--area, var(--border-strong));
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: color-mix(in srgb, var(--area, var(--border-strong)) 18%, var(--bg));
   color: var(--area, var(--text));
   font-size: 1rem;
   font-weight: 800;
