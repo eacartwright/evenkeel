@@ -58,7 +58,8 @@ Legend: **[Evan]** = needs Evan.
 
 ## Everyday
 
-- **Update** after a push to `main`: admin PowerShell, `cd C:\Apps\evenkeel; .\scripts\update.ps1`.
+- **Update** after a push to `main`: the **Update Evenkeel** shortcut on the desktop (it runs
+  `.\scripts\update.ps1` in `C:\Apps\evenkeel` as admin).
   The installed app offers **↻ Update** next time it's opened.
 - **Health:** `Invoke-RestMethod http://127.0.0.1:8083/api/health`.
 - **Restore a backup:** `Stop-ScheduledTask evenkeel`, copy the backup over `data\evenkeel.db`,

@@ -46,8 +46,9 @@ Data is `data/evenkeel.db` (SQLite, git-ignored, per machine). Test against a sc
   temporary font tester) are foodlab's. **Before building something foodlab or sideshow already
   has, port theirs** rather than writing a smaller version.
 
-Schema changes: **append** a migration to `MIGRATIONS` in `server/src/db.ts`; never edit old
-ones. Deletions are tombstones (`deleted`), restorable with Undo or the page's Restore.
+Schema changes: **append** a migration to `MIGRATIONS` in `server/src/db.ts`; never edit one
+that has been committed, even if it seems unreleased (a dev DB on another machine may have run it,
+and a database never runs the same migration twice). An extra migration costs nothing. Deletions are tombstones (`deleted`), restorable with Undo or the page's Restore.
 
 ## UI conventions (same as foodlab)
 
@@ -70,6 +71,8 @@ ones. Deletions are tombstones (`deleted`), restorable with Undo or the page's R
 ## Working with Evan
 
 - Commit and push only when asked.
+- Deploys with the **Update Evenkeel** shortcut on ripley's desktop (it runs `scripts\update.ps1`);
+  point him to that, not the script.
 - **"Dev notes" means the live ones** on the mini PC (ripley), never this machine's dev DB:
   read `\\ripley\C\Apps\evenkeel\data\dev-notes.md` (`Z:\Apps\evenkeel\...` on the laptop). Read
   only; never open the live `.db` over the share.
