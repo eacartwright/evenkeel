@@ -95,9 +95,13 @@ No priority flags. Three tiers I'll actually respect, and the inbox before them:
 
 ### 4.3 Settings and dev notes
 
-`settings` has one record, `app`: the areas list. Colors are per device (localStorage).
-Dev notes (🧪, as in foodlab) are notes about the app itself, with the page they were written on,
-mirrored to `data/dev-notes.md` for the next build session.
+`settings` has one record, `app`: the areas list. Colors and fonts are per device (localStorage).
+Dev notes (🧪, the same as foodlab's and sideshow's) are notes about the app itself: editable,
+optionally linked to the page they were written on ("Link it to this page", remembered per
+device), with files attached (📎, or paste a screenshot into the box). Copy puts the open ones
+on the clipboard as Markdown. Files are uploaded to `POST /api/files`, kept in `data/files`
+under their ids (the `files` table has their names and types) and backed up with the database.
+Mirrored to `data/dev-notes.md`, with each note's files, for the next build session.
 
 ### 4.4 Planned records
 
@@ -245,7 +249,10 @@ date (5 min)". Have ready: old passport, a photo, a payment card, the trip dates
 
 ### 5.7 Settings (⚙️)
 
-Colors (per device); Areas, one per line. Things in an area keep it if it's taken off the list.
+Sections down the side, as in foodlab (the last one opened is remembered): **General**, Colors
+(per device); **Areas**, one per line (things in an area keep it if it's taken off the list);
+**Experimental**, things being tried out: the header and app font pickers (Google Fonts, per
+device; temporary, like foodlab's).
 
 ## 6. Chores and reminders (phase 2, planned)
 

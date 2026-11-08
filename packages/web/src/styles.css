@@ -1597,8 +1597,7 @@ ul.notes li.done .note-text {
   gap: 4px;
   flex: none;
 }
-.is-finished .row-name,
-.is-finished .devnote-text {
+.is-finished .row-name {
   text-decoration: line-through;
   color: var(--muted);
 }
@@ -1716,13 +1715,25 @@ ul.notes li.done .note-text {
 .settings-foot {
   margin-top: 18px;
 }
-.devnote input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  flex: none;
+/* A dev note's files (as in foodlab). */
+.attached {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
 }
-.devnote-text {
-  white-space: pre-wrap;
+.attached-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.attached-file img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  display: block;
 }
 
 /* Counts are information, not alarms (nothing nags): calm, in the accent's soft color. */

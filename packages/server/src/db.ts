@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { emptyState, type DevNote, type Id, type Item, type Settings, type State } from "@evenkeel/shared";
+import { emptyState, type Attachment, type DevNote, type Id, type Item, type Settings, type State } from "@evenkeel/shared";
 
 // SQLite persistence: ordinary tables, one row per record, so the file reads well in any SQLite
 // browser. Schema changes go in MIGRATIONS, appended, never edited (as in foodlab and sideshow).
@@ -47,6 +47,18 @@ const MIGRATIONS: string[] = [
   INSERT INTO meta (key, value) VALUES ('rev', '1');
   INSERT INTO settings (id, areas, created_at, updated_at, rev)
     VALUES ('app', '["Home","Health","Money","Admin","Chores","Projects"]', 0, 0, 1);
+  `,
+  // 2026-11-08: files on dev notes (as in foodlab); the files themselves are in data/files under
+  // their ids (files.ts).
+  `
+  CREATE TABLE files (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  ALTER TABLE dev_notes ADD COLUMN files TEXT NOT NULL DEFAULT '[]';  -- JSON [{ id, name, type }]
   `,
 ];
 
@@ -119,7 +131,7 @@ export function loadState(db: DB): State {
     } satisfies Item;
   }
   for (const r of db.prepare("SELECT * FROM dev_notes").all() as Row[]) {
-    s.devnotes[r.id] = { ...base(r), text: r.text, path: r.path, done: !!r.done } satisfies DevNote;
+    s.devnotes[r.id] = { ...base(r), text: r.text, path: r.path, done: !!r.done, files: JSON.parse(r.files) as Attachment[] } satisfies DevNote;
   }
   for (const r of db.prepare("SELECT * FROM settings").all() as Row[]) {
     s.settings[r.id] = { ...base(r), areas: JSON.parse(r.areas) } satisfies Settings;
@@ -163,7 +175,7 @@ export const save = {
     });
   },
   devnotes(db: DB, x: DevNote) {
-    upsert(db, "dev_notes", { ...baseCols(x), text: x.text, path: x.path, done: x.done ? 1 : 0 });
+    upsert(db, "dev_notes", { ...baseCols(x), text: x.text, path: x.path, done: x.done ? 1 : 0, files: JSON.stringify(x.files) });
   },
   settings(db: DB, x: Settings) {
     upsert(db, "settings", { ...baseCols(x), areas: JSON.stringify(x.areas) });

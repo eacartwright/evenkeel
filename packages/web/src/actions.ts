@@ -1,4 +1,4 @@
-import { blank, newId, SETTINGS_ID, settingsOf, today, type CapturedLine, type Id, type Item, type Settings, type Status, type Tier } from "@evenkeel/shared";
+import { blank, newId, SETTINGS_ID, settingsOf, today, type Attachment, type CapturedLine, type DevNote, type Id, type Item, type Settings, type Status, type Tier } from "@evenkeel/shared";
 import { data, put } from "./sync";
 import { showToast } from "./toast";
 
@@ -98,8 +98,19 @@ export function saveSettings(change: Partial<Settings>) {
   put("settings", { ...s, ...change });
 }
 
-export function addDevNote(text: string) {
+/** A new dev note, linked to the page it was written on if `withPage`. */
+export function addDevNote(text: string, withPage: boolean, files: Attachment[] = []) {
   const t = text.trim();
   if (!t) return;
-  put("devnotes", blank.devnote(newId(), t, location.pathname + location.search));
+  put("devnotes", { ...blank.devnote(newId(), t, withPage ? location.pathname + location.search : ""), files });
+}
+
+/** New text for a note; emptying it leaves the note as it was (✕ deletes). */
+export function editDevNote(n: DevNote, text: string) {
+  if (text.trim()) put("devnotes", { ...(data().state.devnotes[n.id] ?? n), text: text.trim() });
+}
+
+export function removeDevNote(n: DevNote) {
+  put("devnotes", { ...(data().state.devnotes[n.id] ?? n), deleted: true });
+  showToast("Deleted the note", { label: "Undo", run: () => put("devnotes", { ...(data().state.devnotes[n.id] ?? n), deleted: false }) });
 }

@@ -14,7 +14,7 @@ Legend: **[Evan]** = needs Evan.
 | Port | **8083**, reached as `127.0.0.1:8083` (8080 Caddy, 8081 sideshow, 8082 foodlab) |
 | Address | **https://evenkeel.evans.tools** |
 | Login | Cloudflare Access app `evenkeel`, only Evan's email; `evenkeel icons` app lets the manifest and icons through (needed for Android) |
-| Data | `C:\Apps\evenkeel\data\evenkeel.db` |
+| Data | `C:\Apps\evenkeel\data\evenkeel.db`; dev note files in `data\files` |
 | Backups | Daily to `\\evnas\Junk\Tech\DBBackups\evenkeel`, 30 kept |
 | Log | `C:\Apps\evenkeel\data\server.log` |
 

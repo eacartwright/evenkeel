@@ -1,4 +1,4 @@
-import { ENERGIES, SETTINGS_ID, STATUSES, TIERS, type DevNote, type Item, type Kind, type Records, type Settings } from "./types";
+import { ENERGIES, SETTINGS_ID, STATUSES, TIERS, type Attachment, type DevNote, type Item, type Kind, type Records, type Settings } from "./types";
 
 // Turns a request body into a clean record, or says what's wrong. The server runs these on
 // every save; links to other records are checked separately (server/store.ts), since that needs state.
@@ -86,9 +86,23 @@ function item(body: unknown, recId: string, now: number): Item {
   };
 }
 
+const FILE_ID = /^[0-9a-f-]{36}$/;
+const fileId = (x: unknown, field: string): string => {
+  if (typeof x !== "string" || !FILE_ID.test(x)) throw new Invalid(`${field}: expected a file id`);
+  return x;
+};
+const attachments = (x: unknown): Attachment[] => {
+  if (x === undefined || x === null) return [];
+  if (!Array.isArray(x) || x.length > 50) throw new Invalid("files: expected a list (up to 50)");
+  return x.map((f, i) => {
+    const b = obj(f);
+    return { id: fileId(b.id, `files[${i}].id`), name: str(b.name, `files[${i}].name`, 200) || "file", type: str(b.type, `files[${i}].type`, 200) };
+  });
+};
+
 function devnote(body: unknown, recId: string, now: number): DevNote {
   const b = obj(body);
-  return { ...base(b, recId, now), text: required(b.text, "text", 20_000), path: str(b.path, "path", 500), done: bool(b.done) };
+  return { ...base(b, recId, now), text: required(b.text, "text", 20_000), path: str(b.path, "path", 500), done: bool(b.done), files: attachments(b.files) };
 }
 
 function settings(body: unknown, recId: string, now: number): Settings {

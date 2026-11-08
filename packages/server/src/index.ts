@@ -8,6 +8,7 @@ import { Invalid, KINDS, type Kind } from "@evenkeel/shared";
 import { startBackups } from "./backup";
 import { openDb } from "./db";
 import { writeDevNotes } from "./devNotesFile";
+import { FileStore, MAX_FILE } from "./files";
 import { Store } from "./store";
 
 const PORT = Number(process.env.PORT ?? 8789);
@@ -15,10 +16,12 @@ const DB_FILE = process.env.EVENKEEL_DB ?? fileURLToPath(new URL("../../../data/
 const BACKUP_DIR = process.env.EVENKEEL_BACKUP_DIR || join(dirname(DB_FILE), "backups");
 const WEB_DIST = fileURLToPath(new URL("../../web/dist", import.meta.url));
 const DEV_NOTES_FILE = join(dirname(DB_FILE), "dev-notes.md");
+const FILES_DIR = process.env.EVENKEEL_FILES_DIR ?? join(dirname(DB_FILE), "files");
 
 const db = openDb(DB_FILE);
 const store = new Store(db);
-const backups = startBackups(db, BACKUP_DIR, undefined, "evenkeel");
+const files = new FileStore(db, FILES_DIR);
+const backups = startBackups(db, BACKUP_DIR, FILES_DIR, "evenkeel");
 writeDevNotes(DEV_NOTES_FILE, store.state);
 
 // The build being served, named by its hashed script ("/assets/index-Bx3k.js"). The app compares
@@ -36,6 +39,41 @@ if (BUILD)
   });
 
 app.get("/api/health", (c) => c.json({ ok: true, rev: store.rev, lastBackup: backups.latest() }));
+
+// A file, by id (dev note attachments). The name after it is for people and is ignored.
+// Never changes, so cached for good. (Same as foodlab.)
+app.get("/api/files/:id/:name?", (c) => {
+  const id = c.req.param("id");
+  const file = /^[0-9a-f-]{36}$/.test(id) ? files.read(id) : null;
+  if (!file) return c.json({ error: "No such file" }, 404);
+  const inline = /^(image\/(png|jpeg|gif|webp)|application\/pdf|text\/plain)$/.test(file.info.type);
+  return new Response(new Uint8Array(file.data), {
+    headers: {
+      "content-type": file.info.type,
+      "content-length": String(file.info.size),
+      "cache-control": "private, max-age=31536000, immutable",
+      "x-content-type-options": "nosniff",
+      "content-disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(file.info.name)}`,
+    },
+  });
+});
+
+// Upload: the raw bytes as the body, the type as Content-Type, the name in X-File-Name
+// (URL-encoded). Answers with the file's id; the note that uses it is saved separately.
+app.post("/api/files", async (c) => {
+  const tooBig = { error: `Files can be up to ${MAX_FILE / 1024 / 1024} MB` };
+  if (Number(c.req.header("content-length") ?? 0) > MAX_FILE) return c.json(tooBig, 413);
+  const data = new Uint8Array(await c.req.arrayBuffer());
+  if (!data.byteLength) return c.json({ error: "Empty file" }, 400);
+  if (data.byteLength > MAX_FILE) return c.json(tooBig, 413);
+  let name = "file";
+  try {
+    name = decodeURIComponent(c.req.header("x-file-name") ?? "file");
+  } catch {
+    // Not URL-encoded: keep "file".
+  }
+  return c.json(files.save(data, name, c.req.header("content-type") ?? ""));
+});
 
 // Everything, for the app to keep a copy of. A personal task list is small; the ETag lets a
 // device that's up to date get a 304 instead.
@@ -75,6 +113,7 @@ if (existsSync(WEB_DIST)) {
   // must be revalidated, or the installed app keeps running an old build.
   app.use("/*", async (c, next) => {
     await next();
+    if (c.req.path.startsWith("/api/files/")) return; // its own: cached for good
     c.header("Cache-Control", c.req.path.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "no-cache");
   });
   app.use("/*", serveStatic({ root: WEB_DIST }));
@@ -83,5 +122,5 @@ if (existsSync(WEB_DIST)) {
 }
 
 serve({ fetch: app.fetch, port: PORT, hostname: "0.0.0.0" }, (info) => {
-  console.log(`evenkeel server on http://localhost:${info.port}  (db: ${DB_FILE}, backups: ${BACKUP_DIR})`);
+  console.log(`evenkeel server on http://localhost:${info.port}  (db: ${DB_FILE}, files: ${FILES_DIR}, backups: ${BACKUP_DIR})`);
 });

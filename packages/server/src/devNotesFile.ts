@@ -11,7 +11,10 @@ export function devNotesMarkdown(state: State): string {
   const notes = Object.values(state.devnotes)
     .filter((n) => !n.deleted)
     .sort((a, b) => a.createdAt - b.createdAt);
-  const line = (n: (typeof notes)[number]) => `- ${n.text.replace(/\n/g, "\n  ")} (${day(n.createdAt)}${n.path ? `, ${n.path}` : ""}, id ${n.id})`;
+  // Attachments as their place beside this file (files/<id>), so they can be opened from here.
+  const attached = (n: (typeof notes)[number]) => n.files.map((f) => `\n  - attached: files/${f.id} (${f.name}, ${f.type || "?"})`).join("");
+  const line = (n: (typeof notes)[number]) =>
+    `- ${n.text.replace(/\n/g, "\n  ")} (${day(n.createdAt)}${n.path ? `, ${n.path}` : ""}, id ${n.id})${attached(n)}`;
   const open = notes.filter((n) => !n.done);
   const done = notes.filter((n) => n.done);
   return [

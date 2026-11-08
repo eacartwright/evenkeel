@@ -90,6 +90,13 @@ describe("validate", () => {
     expect(validators.settings({ areas: ["Home", " home", "", "Health"] }, "app", NOW).areas).toEqual(["Home", "Health"]);
     expect(() => validators.settings({}, "other", NOW)).toThrow(Invalid);
   });
+  it("keeps a dev note's files, and only real file ids", () => {
+    const f = { id: "0f40bf1e-a2a9-426f-80b6-3d53dc4a8de1", name: "shot.png", type: "image/png" };
+    expect(validators.devnotes({ text: "x" }, "a", NOW).files).toEqual([]);
+    expect(validators.devnotes({ text: "x", files: [f] }, "a", NOW).files).toEqual([f]);
+    expect(validators.devnotes({ text: "x", files: [{ ...f, name: "" }] }, "a", NOW).files[0]!.name).toBe("file");
+    expect(() => validators.devnotes({ text: "x", files: [{ ...f, id: "../db" }] }, "a", NOW)).toThrow(/file id/);
+  });
 });
 
 describe("View", () => {

@@ -63,11 +63,20 @@ export interface Item extends Base {
   doneAt: number | null;
 }
 
+/** A file attached to a dev note: a screenshot or anything else (as in foodlab). */
+export interface Attachment {
+  id: Id;
+  name: string;
+  type: string;
+}
+export const fileUrl = (id: Id, name = "") => `/api/files/${id}${name ? `/${encodeURIComponent(name)}` : ""}`;
+
 export interface DevNote extends Base {
   text: string;
-  /** The page it was written on. */
+  /** The page it was written on, or "" if it wasn't linked to one. */
   path: string;
   done: boolean;
+  files: Attachment[];
 }
 
 export const SETTINGS_ID = "app";
@@ -111,7 +120,7 @@ export const blank = {
     blockedBy: [],
     doneAt: null,
   }),
-  devnote: (id: Id, text: string, path: string, now = Date.now()): DevNote => ({ ...baseOf(id, now), text, path, done: false }),
+  devnote: (id: Id, text: string, path: string, now = Date.now()): DevNote => ({ ...baseOf(id, now), text, path, done: false, files: [] }),
   settings: (now = Date.now()): Settings => ({ ...baseOf(SETTINGS_ID, now), areas: [...DEFAULT_AREAS] }),
 };
 

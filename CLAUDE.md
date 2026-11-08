@@ -32,14 +32,18 @@ Data is `data/evenkeel.db` (SQLite, git-ignored, per machine). Test against a sc
   `dev_notes`, `settings` (one row, `app`), `meta.rev`; `loadState` / `save.<kind>`. `store.ts`:
   the state in memory; `put(kind, id, body)` validates, checks parents (exist, no loops) and
   `blockedBy`, bumps `rev`. `index.ts`: `GET /api/state` (ETag = rev), `PUT /api/<kind>/<id>`,
-  `/api/health`, the built app with SPA fallback. `backup.ts`: daily `VACUUM INTO`, 30 kept.
-  `devNotesFile.ts`: `data/dev-notes.md`.
+  `/api/health`, `GET|POST /api/files` (dev note attachments), the built app with SPA fallback.
+  `files.ts`: `data/files` + table `files` (foodlab's). `backup.ts`: daily `VACUUM INTO`, 30
+  kept, files copied once. `devNotesFile.ts`: `data/dev-notes.md`.
 - `packages/web` — React + Vite PWA, share target `/share`. `sync.ts` is foodlab's (localStorage
   state + outbox of whole records). `actions.ts`: every change builds on the **latest** record
   (`data().state`), never the one from the last render. `components/`: `CapturePage`,
   `InboxPage`, `TodayPage`, `AllPage`, `ItemPage`, `ItemRow` (`Check`, `Facts`), `QuickAdd`,
-  `Settings`, `DevNotes`, `controls.tsx` (foodlab's `DraftInput`, `TitleInput`, `NumberInput`,
-  `DraftTextarea`, `Segmented`, `Field`).
+  `Settings` (sections: General, Areas, Experimental), `DevNotes` (foodlab's: edit, files, page
+  link, Copy), `controls.tsx` (foodlab's `DraftInput`, `TitleInput`, `NumberInput`,
+  `DraftTextarea`, `Segmented`, `Field`). `uploads.ts`, `fonts.ts` + `fonts-sans.ts` (the
+  temporary font tester) are foodlab's. **Before building something foodlab or sideshow already
+  has, port theirs** rather than writing a smaller version.
 
 Schema changes: **append** a migration to `MIGRATIONS` in `server/src/db.ts`; never edit old
 ones. Deletions are tombstones (`deleted`), restorable with Undo or the page's Restore.
@@ -81,5 +85,9 @@ ones. Deletions are tombstones (`deleted`), restorable with Undo or the page's R
   share, phone layout in dark, Back closing the drawer). Not yet run on NOSTROMO or deployed.
 - 2026-11-07: Master inventory loaded into the HPBROBOOK dev DB (111 items). All now has four views
   on trial (Three, Areas, Board, List; DESIGN.md §5.4); Evan is trying them to see what works.
+- 2026-11-08, Evan's dev notes: Dev Notes and Settings brought up to foodlab's (edit, attach or
+  paste files, link to the page or not, Copy; Settings sections with Experimental → fonts).
+  Migration 2: `files` table + `dev_notes.files`. 30 tests; headless check on a copy of the
+  laptop DB. Still open: **repeating tasks** (chores; maybe suggest a repeat for the Chores area).
 - **Next:** settle the views from use; run it on NOSTROMO; then ramble capture and the clarify interview (DESIGN.md §5.6),
   reusing foodlab's `ai.ts`.
