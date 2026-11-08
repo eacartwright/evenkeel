@@ -68,8 +68,11 @@ Legend: **[Evan]** = needs Evan.
 - **Dev notes** are mirrored to `data\dev-notes.md` (`Z:\Apps\evenkeel\data\dev-notes.md` from
   the laptop). Never open the live `evenkeel.db` over the share.
 
-## AI keys (next: ramble capture and clarify)
+## AI keys (✨ Sort, ✨ Clarify, 🎙 Talk)
 
 The same keys as foodlab, added the same way (foodlab's runbook, "AI keys"): `ANTHROPIC_API_KEY`
 and `OPENAI_API_KEY` in `C:\Apps\evenkeel\.env`, then restart the task. Separate keys per app
 ("evenkeel mini PC") keep each app's spend visible on the providers' dashboards.
+`ANTHROPIC_API_KEY` alone runs ✨ Sort and ✨ Clarify with the default models; 🎙 Talk needs
+`OPENAI_API_KEY` (or pick GPT models in Settings → AI and use only that key). Settings → AI shows
+which keys the server sees, and the month's cost.

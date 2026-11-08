@@ -49,7 +49,8 @@ port 8083, `https://evenkeel.evans.tools` behind Cloudflare Access (docs/runbook
 ## 3. Phases
 
 1. **Capture and clarify.** Items, inbox, typed capture, Today, All, item pages, PWA install
-   (**built 2026-11-07**); then voice rambles with AI extraction and the clarify interview (next).
+   (**built 2026-11-07**); then voice rambles with AI extraction and the clarify interview
+   (**built 2026-11-08**, §5.6).
    *Done when* a 10-minute ramble becomes reviewed inbox items, and a vague admin task has a
    next action and a "have ready" checklist.
 2. **Chores and reminders** (§6). Cadences with freshness instead of overdue, Web Push, Todoist
@@ -184,10 +185,41 @@ Title with its box; the **Next step** box up top (the clarify interview will fil
 Notes; Steps (add with Enter, reorder ↑↓, tick off); Skip · Drop · Delete. Everything saves as
 you go (`DraftInput` on Enter or leaving the box, as in foodlab).
 
-### 5.6 Next: AI (phase 1, part 2)
+### 5.6 AI (phase 1, part 2; built 2026-11-08)
 
 Reuses foodlab's AI module (Claude and GPT, cost in `ai_usage`, monthly cap). Both write
 **proposals**, never items: nothing is committed without a tap.
+
+**As built** (2026-11-08; the plan it came from follows):
+
+- **Capture page: 🎙 Talk and ✨ Sort.** 🎙 records on the device; the server transcribes it
+  (OpenAI's `gpt-transcribe`, sideshow's dictation) and the words land in the capture box, where
+  they can be fixed or added to (typing or pasting a ramble works the same). ✨ Sort sends the box
+  to the **fast model** (Settings → AI → Sort a ramble, Haiku by default). The review lists each
+  candidate with a Keep box, its title, kind (Task, Project, Chore, Note), tier, area, a deadline
+  chip (✕ to drop it), an estimate, the speaker's words, and a project's steps (editable, ✕).
+  One that looks like an open item is unticked and links to it. **Keep N** makes the items (steps
+  under them, his words quoted in the notes; Undo takes them back); **Edit the text** puts the
+  ramble back in the box; **Discard all**. The review is kept on the device until it's done.
+- **Item page: ✨ Clarify** (any item). The **stronger model** (Settings → AI → Clarify, Opus by
+  default) answers with up to 6 questions and a draft plan at once: a clearer title, a next step,
+  steps with minutes (and the total), "find out" steps, a "have ready" list. Answer what's easy
+  (each has **Don't know**) and **Redraft with my answers**, or accept the draft as it is. Everything
+  in the plan is editable and removable. **Accept** sets the title and next step, adds the steps
+  and find-outs as steps, and adds **Have ready** (a checklist) and the answers (**Clarified**,
+  dated) to the notes. Undo puts it all back.
+- The model only sees what it needs: today, the areas, open top-level items (for duplicates,
+  ramble only), and for clarify the item, its path, notes, steps and earlier answers. Its answer
+  is checked before it's shown (`shared/ai.ts`): areas only from the list, real future dates only
+  (a hard tier without one becomes chip), duplicates only of open items.
+- **Settings → AI**: the two models (Clarify's "Off" turns all AI off), which keys the server
+  has, this month's estimated cost with a meter and recent calls, the monthly cap ($5 by default)
+  and alerts. Kept on the settings record (`ai`), so it's the same on every device.
+- **Not yet:** recordings kept across closing the app (IndexedDB, below); a recording that fails
+  to send has Try again while the app stays open. A ramble's whole transcript isn't stored, only
+  each kept item's quote.
+
+**The plan:**
 
 - **Ramble**: hold the mic, record; the server transcribes (OpenAI, the key foodlab has);
   the model extracts candidate items (title, kind, area, tier, dates, duplicate-of, the quote);

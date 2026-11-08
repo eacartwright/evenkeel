@@ -7,9 +7,12 @@
     "start": "node --env-file-if-exists=../../.env --import tsx src/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
     "@evenkeel/shared": "*",
     "@hono/node-server": "^2.1.1",
-    "hono": "^4.13.9"
+    "hono": "^4.13.9",
+    "openai": "^7.53.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",

@@ -28,19 +28,26 @@ Data is `data/evenkeel.db` (SQLite, git-ignored, per machine). Test against a sc
   server on every save), `capture.ts` (`captureLines`: lines → items, indent = step;
   `fromShared`), `derive.ts` (`View`: children / ancestors / `wouldLoop`, `progress`, `inbox`,
   `today`, `all`, `areas`, `blocked`), `repeat.ts` (repeating items: `repeatState`, `nextOn`,
-  `repeatLabel`, `logged`, `newRepeat`; DESIGN.md §6.1). Pure; tests in `shared.test.ts`.
+  `repeatLabel`, `logged`, `newRepeat`; DESIGN.md §6.1), `ai.ts` (foodlab's models, prices, `AiSettings`,
+  `aiOf`, `crossed`; the context sent to the model, `cleanFound` / `cleanPlan` checking what comes
+  back, `bodyWithPlan`; DESIGN.md §5.6). Pure; tests in `shared.test.ts` and `ai.test.ts`.
 - `packages/server` — Node + Hono + `node:sqlite` (Node ≥ 22.13). `db.ts`: tables `items`,
   `dev_notes`, `settings` (one row, `app`), `meta.rev`; `loadState` / `save.<kind>`. `store.ts`:
   the state in memory; `put(kind, id, body)` validates, checks parents (exist, no loops) and
   `blockedBy`, bumps `rev`. `index.ts`: `GET /api/state` (ETag = rev), `PUT /api/<kind>/<id>`,
   `/api/health`, `GET|POST /api/files` (dev note attachments), the built app with SPA fallback.
-  `files.ts`: `data/files` + table `files` (foodlab's). `backup.ts`: daily `VACUUM INTO`, 30
+  `files.ts`: `data/files` + table `files` (foodlab's). `ai.ts`: foodlab's `aiCall` with two
+  jobs (`RAMBLE_JOB` on the fast model, `CLARIFY_JOB` on the stronger one), `transcribe`
+  (sideshow's dictation), `ai_usage` and the monthly cap; `GET /api/ai`, `POST
+  /api/ai/ramble|clarify|transcribe`. Tests pass their own `Ask` (`ai.test.ts`); to try the UI
+  without spending, point the SDK at a stand-in with `ANTHROPIC_BASE_URL` (+ any key). `backup.ts`: daily `VACUUM INTO`, 30
   kept, files copied once. `devNotesFile.ts`: `data/dev-notes.md`.
 - `packages/web` — React + Vite PWA, share target `/share`. `sync.ts` is foodlab's (localStorage
   state + outbox of whole records). `actions.ts`: every change builds on the **latest** record
   (`data().state`), never the one from the last render. `components/`: `CapturePage`,
   `InboxPage`, `TodayPage`, `AllPage`, `ItemPage`, `ItemRow` (`Check`, `Facts`), `QuickAdd`,
-  `Settings` (sections: General, Areas, Experimental), `DevNotes` (foodlab's: edit, files, page
+  `RambleReview` (✨ Sort's review), `ClarifyDialog` (✨ Clarify),
+  `Settings` (sections: General, Areas, AI, Experimental), `DevNotes` (foodlab's: edit, files, page
   link, Copy), `controls.tsx` (foodlab's `DraftInput`, `TitleInput`, `NumberInput`,
   `DraftTextarea`, `Segmented`, `Field`). `uploads.ts`, `fonts.ts` + `fonts-sans.ts` (the
   temporary font tester) are foodlab's. **Before building something foodlab or sideshow already
@@ -103,5 +110,10 @@ and a database never runs the same migration twice). An extra migration costs no
   `controls.tsx`; new only via "+ Add", after a typed "Ch" became an area); Settings → Areas
   renames (items follow, merging onto an existing name), reorders and deletes areas (Undo).
   Later is full size on an item's page.
-- **Next:** settle the views from use; run it on NOSTROMO; then ramble capture and the clarify interview (DESIGN.md §5.6),
-  reusing foodlab's `ai.ts`.
+- 2026-11-08: **AI built** (DESIGN.md §5.6), in a cloud session: 🎙 Talk and ✨ Sort on Capture
+  (review, then Keep), ✨ Clarify on an item (questions, a plan, Accept), Settings → AI.
+  Migration 4: `settings.ai`, table `ai_usage`. 55 tests; headless walkthrough against a stand-in
+  Claude API (desktop and phone dark), migration checked on a v3 DB. **Not yet run for real:** needs
+  `ANTHROPIC_API_KEY` (and `OPENAI_API_KEY` for 🎙) in `.env` on ripley; ask how the questions and
+  plans read, and whether Haiku sorts rambles well enough.
+- **Next:** settle the views from use; run it on NOSTROMO; keep recordings offline (IndexedDB).

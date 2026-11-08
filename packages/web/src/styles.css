@@ -2055,3 +2055,149 @@ ul.notes li.done .note-text {
   min-width: 4.5em;
   text-align: right;
 }
+
+/* ---- AI (DESIGN.md §5.6): ramble review, Clarify, Settings → AI ---- */
+
+.btn.recording {
+  border-color: var(--primary);
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+.ramble-review {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin: 12px 0;
+  background: var(--surface);
+}
+.candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0;
+}
+.candidate {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg);
+}
+.candidate.is-off {
+  opacity: 0.55;
+}
+.candidate-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.candidate-keep {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--primary);
+}
+.candidate-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-left: 30px;
+}
+.candidate-facts .select {
+  width: auto;
+}
+.candidate-quote,
+.candidate-dup {
+  margin: 0;
+  padding-left: 30px;
+}
+.candidate-quote {
+  font-style: italic;
+}
+.plan-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.candidate .plan-list {
+  padding-left: 30px;
+}
+.plan-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.plan-list .est-input {
+  width: 3.6em;
+  flex: none;
+}
+.plan-head {
+  margin: 14px 0 4px;
+  font-size: 0.95rem;
+}
+.plan .field-label {
+  display: block;
+  margin: 10px 0 4px;
+}
+.plan > .input {
+  width: 100%;
+}
+.plan-list .input.grow {
+  min-width: 0;
+}
+.dialog.clarify {
+  max-width: 680px;
+}
+.questions {
+  margin: 6px 0 10px;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.question {
+  display: block;
+  margin-bottom: 4px;
+}
+.questions .inline {
+  display: flex;
+  gap: 6px;
+}
+.thinking {
+  padding: 16px 0;
+}
+.clarify-btn {
+  font-size: 0.9rem;
+}
+.ai-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.meter {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--primary-soft);
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  background: var(--primary);
+}
+.meter.warn .meter-fill {
+  background: var(--warn);
+}
+.meter.over .meter-fill {
+  background: var(--danger);
+}
+.recent-calls {
+  padding-left: 1.2em;
+  margin: 6px 0 0;
+}

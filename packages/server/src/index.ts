@@ -4,7 +4,8 @@ import { Hono } from "hono";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Invalid, KINDS, type Kind } from "@evenkeel/shared";
+import { aiOf, Invalid, KINDS, type Kind } from "@evenkeel/shared";
+import { AiStopped, clarify, errorNote, sortRamble, transcribe, usage } from "./ai";
 import { startBackups } from "./backup";
 import { openDb } from "./db";
 import { writeDevNotes } from "./devNotesFile";
@@ -102,6 +103,70 @@ app.put("/api/:kind/:id", async (c) => {
     console.error(err);
     store.reload();
     return c.json({ error: "Couldn't save" }, 500);
+  }
+});
+
+// ---- AI (DESIGN.md §5.6): proposals only; the app saves what's accepted as ordinary records ----
+
+/** A call's failure as the app shows it: 409 when AI can't run (off, no key, cap spent), 502 when the provider failed. */
+const aiFailure = (err: unknown) => {
+  if (err instanceof AiStopped) return { body: { error: err.message }, status: 409 as const };
+  console.error(err);
+  return { body: { error: `The AI service refused or couldn't be reached: ${errorNote(err)}` }, status: 502 as const };
+};
+/** What every reply carries about cost, so the app can say a call crossed an alert. */
+const spent = (r: { model: string; costUsd: number; alerts: number[] }) => ({ model: r.model, costUsd: r.costUsd, alerts: r.alerts, limitUsd: aiOf(store.state).monthlyLimitUsd });
+const jsonOnly = (ct: string | undefined) => (ct ?? "").startsWith("application/json");
+
+app.get("/api/ai", (c) => c.json(usage(db)));
+
+// A ramble (typed, pasted or transcribed) → candidate items to keep, edit or discard.
+app.post("/api/ai/ramble", async (c) => {
+  if (!jsonOnly(c.req.header("content-type"))) return c.json({ error: "Expected JSON" }, 415);
+  const body = (await c.req.json().catch(() => null)) as { text?: unknown } | null;
+  const text = typeof body?.text === "string" ? body.text.slice(0, 60_000) : "";
+  if (!text.trim()) return c.json({ error: "Nothing to sort" }, 400);
+  try {
+    const r = await sortRamble(db, store.state, text);
+    return c.json({ items: r.out ?? [], ...spent(r) });
+  } catch (err) {
+    const f = aiFailure(err);
+    return c.json(f.body, f.status);
+  }
+});
+
+// One item → questions and a proposed plan. `answers` are the questions answered so far.
+app.post("/api/ai/clarify", async (c) => {
+  if (!jsonOnly(c.req.header("content-type"))) return c.json({ error: "Expected JSON" }, 415);
+  const body = (await c.req.json().catch(() => null)) as { id?: unknown; answers?: unknown } | null;
+  const id = typeof body?.id === "string" ? body.id : "";
+  const answers = (Array.isArray(body?.answers) ? body.answers : [])
+    .filter((x): x is { q: string; a: string } => !!x && typeof x.q === "string" && typeof x.a === "string")
+    .slice(0, 30)
+    .map((x) => ({ q: x.q.slice(0, 500), a: x.a.slice(0, 2000) }));
+  try {
+    const r = await clarify(db, store.state, id, answers);
+    if (!r.out) return c.json({ error: "The model didn't return a plan; try again", ...spent(r) }, 502);
+    return c.json({ plan: r.out, ...spent(r) });
+  } catch (err) {
+    const f = aiFailure(err);
+    return c.json(f.body, f.status);
+  }
+});
+
+// A voice ramble: audio in, text out (then sorted like a typed one).
+const MAX_AUDIO = 25 * 1024 * 1024;
+app.post("/api/ai/transcribe", async (c) => {
+  const type = c.req.header("content-type") ?? "";
+  if (!type.startsWith("audio/")) return c.json({ error: "Not audio" }, 400);
+  const data = new Uint8Array(await c.req.arrayBuffer());
+  if (!data.byteLength) return c.json({ error: "Nothing recorded" }, 400);
+  if (data.byteLength > MAX_AUDIO) return c.json({ error: "That recording is too long" }, 413);
+  try {
+    return c.json({ text: await transcribe(db, store.state, { data, type }, Number(c.req.header("x-seconds")) || 0) });
+  } catch (err) {
+    const f = aiFailure(err);
+    return c.json(f.body, f.status);
   }
 });
 

@@ -1,5 +1,6 @@
 import { dayLabel, ENERGIES, ENERGY_LABEL, lastDone, snoozed, newRepeat, REPEAT_UNITS, repeatLabel, repeatState, TIERS, TIER_LABEL, today, type Item, type Repeat, type RepeatUnit } from "@evenkeel/shared";
 import { useRef, useState } from "react";
+import { ClarifyDialog } from "./ClarifyDialog";
 import { addArea, createItem, move, remove, schedule, setLastDone, setNote, setRepeat, setStatus, snooze, update } from "../actions";
 import { A, go } from "../router";
 import { useData } from "../sync";
@@ -13,6 +14,7 @@ import { Check, ItemRow, itemPath, LaterButton } from "./ItemRow";
 export function ItemPage({ id }: { id: string }) {
   const { state, view } = useData();
   const item = state.items[id];
+  const [clarifying, setClarifying] = useState(false);
   if (!item)
     return (
       <div className="page">
@@ -52,7 +54,14 @@ export function ItemPage({ id }: { id: string }) {
             {isTask ? TIER_LABEL[item.tier] : "Note"}
           </A>
         )}
+        <span className="spacer" />
+        {!item.deleted && (
+          <button className="btn small-btn clarify-btn" onClick={() => setClarifying(true)} title="AI asks a few questions, then proposes a clearer title, a next step and steps. Nothing changes until you accept.">
+            ✨ Clarify
+          </button>
+        )}
       </div>
+      {clarifying && <ClarifyDialog id={id} onClose={() => setClarifying(false)} />}
       <div className="title-row item-title">
         <Check item={item} />
         <TitleInput value={item.title} onCommit={(title) => set({ title })} required aria-label="Title" />

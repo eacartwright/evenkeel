@@ -68,6 +68,25 @@ const MIGRATIONS: string[] = [
   ALTER TABLE items ADD COLUMN one_off INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE items ADD COLUMN snoozed_until TEXT;                   -- YYYY-MM-DD
   `,
+  // 2026-11-08: AI (DESIGN.md §5.6): its settings on the settings record, and every call with
+  // its estimated cost (foodlab's ai_usage; server-only, not synced).
+  `
+  ALTER TABLE settings ADD COLUMN ai TEXT;                            -- JSON { model, fastModel, monthlyLimitUsd, alertsAt }
+  CREATE TABLE ai_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at INTEGER NOT NULL,
+    month TEXT NOT NULL,                    -- YYYY-MM, local
+    model TEXT NOT NULL,
+    purpose TEXT NOT NULL,                  -- ramble · clarify · transcribe
+    input_tokens INTEGER NOT NULL,
+    output_tokens INTEGER NOT NULL,
+    cache_read_tokens INTEGER NOT NULL,
+    cost_usd REAL NOT NULL,
+    ok INTEGER NOT NULL,
+    note TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX ai_usage_month ON ai_usage(month);
+  `,
 ];
 
 export type DB = DatabaseSync;
@@ -146,7 +165,7 @@ export function loadState(db: DB): State {
     s.devnotes[r.id] = { ...base(r), text: r.text, path: r.path, done: !!r.done, files: JSON.parse(r.files) as Attachment[] } satisfies DevNote;
   }
   for (const r of db.prepare("SELECT * FROM settings").all() as Row[]) {
-    s.settings[r.id] = { ...base(r), areas: JSON.parse(r.areas) } satisfies Settings;
+    s.settings[r.id] = { ...base(r), areas: JSON.parse(r.areas), ai: r.ai ? JSON.parse(r.ai) : null } satisfies Settings;
   }
   return s;
 }
@@ -194,6 +213,6 @@ export const save = {
     upsert(db, "dev_notes", { ...baseCols(x), text: x.text, path: x.path, done: x.done ? 1 : 0, files: JSON.stringify(x.files) });
   },
   settings(db: DB, x: Settings) {
-    upsert(db, "settings", { ...baseCols(x), areas: JSON.stringify(x.areas) });
+    upsert(db, "settings", { ...baseCols(x), areas: JSON.stringify(x.areas), ai: x.ai ? JSON.stringify(x.ai) : null });
   },
 };

@@ -1,5 +1,7 @@
 import {
   blank,
+  bodyWithPlan,
+  foundBody,
   dayLabel,
   logged,
   newId,
@@ -9,7 +11,10 @@ import {
   today,
   type Attachment,
   type CapturedLine,
+  type Answer,
   type DevNote,
+  type Found,
+  type Plan,
   type Id,
   type Item,
   type Repeat,
@@ -50,6 +55,64 @@ export function capture(lines: CapturedLine[], parentId: Id | null = null): numb
     n += 1 + capture(l.steps, item.id);
   }
   return n;
+}
+
+/**
+ * Kept items from a ramble (DESIGN.md §5.6), each with its steps and his words in its notes.
+ * Undo takes them all back. Returns how many top-level items were made.
+ */
+export function keepFound(found: Found[]): number {
+  const made: Item[] = [];
+  for (const f of found) {
+    const note = f.kind === "note";
+    const item = createItem(f.title, {
+      body: foundBody(f),
+      status: note ? null : "open",
+      tier: note ? "back" : f.tier,
+      area: f.area,
+      deadline: f.deadline,
+      estMinutes: f.estMinutes,
+    });
+    made.push(item);
+    for (const s of f.steps) made.push(createItem(s, { parentId: item.id }));
+  }
+  const n = found.length;
+  if (n)
+    showToast(`Kept ${n} ${n === 1 ? "item" : "items"}`, {
+      label: "Undo",
+      run: () => {
+        for (const m of made) update(m.id, { deleted: true });
+      },
+    });
+  return n;
+}
+
+/**
+ * An accepted plan (DESIGN.md §5.6), as edited: a clearer title, the next step, steps with
+ * estimates (find-outs last), and what to have ready and the answers in the notes. Undo puts the
+ * item back and takes the new steps away.
+ */
+export function applyPlan(id: Id, plan: Plan, answers: Answer[]) {
+  const before = latest(id);
+  if (!before) return;
+  update(id, {
+    title: plan.title.trim() || before.title,
+    nextAction: plan.nextAction.trim() || before.nextAction,
+    // The real date: "Today" would be wrong tomorrow.
+    body: bodyWithPlan(before.body, plan, answers, today()),
+    // A task that was a note becomes one again only if it now has steps to do.
+    ...(before.status === null && (plan.steps.length || plan.unknowns.length) ? { status: "open" as const } : {}),
+  });
+  const made: Item[] = [];
+  for (const s of plan.steps) if (s.title.trim()) made.push(createItem(s.title.trim(), { parentId: id, estMinutes: s.estMinutes }));
+  for (const u of plan.unknowns) if (u.trim()) made.push(createItem(u.trim(), { parentId: id }));
+  showToast(`Plan added to “${plan.title || before.title}”${made.length ? ` (${made.length} step${made.length === 1 ? "" : "s"})` : ""}`, {
+    label: "Undo",
+    run: () => {
+      update(id, { title: before.title, nextAction: before.nextAction, body: before.body, status: before.status });
+      for (const m of made) update(m.id, { deleted: true });
+    },
+  });
 }
 
 /** Done, skipped or dropped, with Undo; or open again. */

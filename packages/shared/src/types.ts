@@ -1,3 +1,5 @@
+import type { AiSettings } from "./ai";
+
 // The records Evenkeel stores (DESIGN.md §4). Client and server share these.
 // Every record is saved whole (PUT /api/<kind>/<id>); `updatedAt` and `rev` are set by the server.
 
@@ -117,6 +119,8 @@ export const SETTINGS_ID = "app";
 export interface Settings extends Base {
   /** The areas offered when filing, in this order. Items can still use others. */
   areas: string[];
+  /** AI models, monthly cap and alerts (DESIGN.md §5.6); null = the defaults. */
+  ai: AiSettings | null;
 }
 
 export const DEFAULT_AREAS = ["Home", "Health", "Money", "Admin", "Chores", "Projects"];
@@ -157,7 +161,7 @@ export const blank = {
     snoozedUntil: null,
   }),
   devnote: (id: Id, text: string, path: string, now = Date.now()): DevNote => ({ ...baseOf(id, now), text, path, done: false, files: [] }),
-  settings: (now = Date.now()): Settings => ({ ...baseOf(SETTINGS_ID, now), areas: [...DEFAULT_AREAS] }),
+  settings: (now = Date.now()): Settings => ({ ...baseOf(SETTINGS_ID, now), areas: [...DEFAULT_AREAS], ai: null }),
 };
 
 export const settingsOf = (state: State): Settings => state.settings[SETTINGS_ID] ?? blank.settings(0);

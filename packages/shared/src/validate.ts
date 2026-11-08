@@ -1,3 +1,4 @@
+import { DEFAULT_AI, modelInfo, type AiSettings } from "./ai";
 import { ENERGIES, REPEAT_KINDS, REPEAT_UNITS, SETTINGS_ID, STATUSES, TIERS, type Attachment, type DevNote, type Item, type Kind, type LogEntry, type Records, type Repeat, type Settings } from "./types";
 
 // Turns a request body into a clean record, or says what's wrong. The server runs these on
@@ -150,7 +151,28 @@ function settings(body: unknown, recId: string, now: number): Settings {
     const s = str(a, "areas", 60).trim();
     if (s && !areas.some((x) => x.toLowerCase() === s.toLowerCase())) areas.push(s);
   }
-  return { ...base(b, recId, now), deleted: false, areas };
+  return { ...base(b, recId, now), deleted: false, areas, ai: aiSettings(b.ai) };
+}
+
+const model = (x: unknown, field: string, fallback: string): string => {
+  if (x === undefined || x === null || x === "") return fallback;
+  if (typeof x !== "string" || (x !== "off" && !modelInfo(x))) throw new Invalid(`${field}: not a model Evenkeel knows`);
+  return x;
+};
+
+function aiSettings(x: unknown): AiSettings | null {
+  if (x === undefined || x === null) return null;
+  const b = obj(x);
+  if (b.alertsAt !== undefined && !Array.isArray(b.alertsAt)) throw new Invalid("ai.alertsAt: expected a list");
+  const alertsAt = [...new Set(((b.alertsAt as unknown[] | undefined) ?? DEFAULT_AI.alertsAt).map((p) => num(p, "ai.alertsAt", 1, 100)))]
+    .filter((p): p is number => p !== null)
+    .sort((p, q) => p - q);
+  return {
+    model: model(b.model, "ai.model", DEFAULT_AI.model),
+    fastModel: model(b.fastModel, "ai.fastModel", DEFAULT_AI.fastModel),
+    monthlyLimitUsd: b.monthlyLimitUsd === undefined ? DEFAULT_AI.monthlyLimitUsd : num(b.monthlyLimitUsd, "ai.monthlyLimitUsd", 0, 10_000),
+    alertsAt,
+  };
 }
 
 export const validators: { [K in Kind]: (body: unknown, id: string, now: number) => Records[K] } = {
