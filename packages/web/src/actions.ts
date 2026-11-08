@@ -1,4 +1,22 @@
-import { blank, newId, SETTINGS_ID, settingsOf, today, type Attachment, type CapturedLine, type DevNote, type Id, type Item, type Settings, type Status, type Tier } from "@evenkeel/shared";
+import {
+  blank,
+  dayLabel,
+  logged,
+  newId,
+  repeatState,
+  SETTINGS_ID,
+  settingsOf,
+  today,
+  type Attachment,
+  type CapturedLine,
+  type DevNote,
+  type Id,
+  type Item,
+  type Repeat,
+  type Settings,
+  type Status,
+  type Tier,
+} from "@evenkeel/shared";
 import { data, put } from "./sync";
 import { showToast } from "./toast";
 
@@ -38,11 +56,60 @@ export function capture(lines: CapturedLine[], parentId: Id | null = null): numb
 export function setStatus(id: Id, status: Status) {
   const before = latest(id);
   if (!before) return;
+  if (before.repeat && before.status === "open" && (status === "done" || status === "skipped")) return didRepeat(before, status);
   put("items", { ...before, status, doneAt: status === "open" ? null : Date.now() });
   if (status !== "open") {
     const word = status === "done" ? "Done" : status === "skipped" ? "Skipped" : "Dropped";
     showToast(`${word}: ${before.title}`, { label: "Undo", run: () => update(id, { status: before.status, doneAt: before.doneAt }) });
   }
+}
+
+/**
+ * Done or skipped, on a repeating item (DESIGN.md §6.1): logged, and it stays open for next time.
+ * Its finished steps open again, so a routine's checklist starts fresh. Undo puts it all back.
+ */
+function didRepeat(before: Item, did: "done" | "skipped") {
+  const steps = data().view.descendants(before.id).filter((s) => s.status === "done" || s.status === "skipped");
+  const after: Item = { ...before, log: logged(before, did), doneAt: Date.now(), snoozedUntil: null };
+  put("items", after);
+  for (const s of steps) put("items", { ...s, status: "open", doneAt: null });
+  const r = repeatState(after);
+  const rule = after.repeat!;
+  const unit = rule.every === 1 ? `a ${rule.unit}` : `${rule.every} ${rule.unit}s`;
+  const next = r?.next ? `next ${dayLabel(r.next)}` : `back in about ${unit}`;
+  showToast(`${did === "done" ? "Done" : "Skipped"}: ${before.title}${next ? ` · ${next}` : ""}`, {
+    label: "Undo",
+    run: () => {
+      update(before.id, { log: before.log, doneAt: before.doneAt, snoozedUntil: before.snoozedUntil });
+      for (const s of steps) update(s.id, { status: s.status, doneAt: s.doneAt });
+    },
+  });
+}
+
+/** Later (DESIGN.md §6.1): off Today until `day`, without counting as done or skipped. Null: back now. */
+export function snooze(id: Id, day: string | null) {
+  const before = latest(id);
+  if (!before) return;
+  update(id, { snoozedUntil: day });
+  if (day) showToast(`Later: ${before.title} · back ${whenLabel(day)}`, { label: "Undo", run: () => update(id, { snoozedUntil: before.snoozedUntil }) });
+}
+
+/** A day to go after "back" or "until": "tomorrow", "Wed", "on Nov 15". */
+export function whenLabel(day: string): string {
+  const l = dayLabel(day);
+  return l === "Tomorrow" || l === "Today" ? l.toLowerCase() : /\d/.test(l) ? `on ${l}` : l;
+}
+
+/** Set, change or stop how an item repeats. */
+export const setRepeat = (id: Id, repeat: Repeat | null) => update(id, { repeat, ...(repeat ? { oneOff: false } : {}) });
+
+/** "Last done" set by hand: replaces the latest entry's day, or adds one (null: clears the log). */
+export function setLastDone(id: Id, day: string | null) {
+  const i = latest(id);
+  if (!i) return;
+  if (!day) return update(id, { log: [] });
+  const log = i.log.length ? [...i.log.slice(0, -1), { ...i.log.at(-1)!, day }] : [{ day, did: "done" as const }];
+  update(id, { log: log.sort((a, b) => a.day.localeCompare(b.day)) });
 }
 
 /** Ticked from a checkbox: done, or open again. */

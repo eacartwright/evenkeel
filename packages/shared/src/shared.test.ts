@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, blank, captureLines, cleanLine, countLines, dayLabel, daysBetween, emptyState, fromShared, Invalid, minutesLabel, NO_AREA, validators, View, type Item, type State } from "./index";
+import { addDays, blank, captureLines, cleanLine, countLines, dayLabel, daysBetween, emptyState, fromShared, Invalid, minutesLabel, newRepeat, nextOn, NO_AREA, repeatLabel, repeatState, validators, View, type Item, type Repeat, type State } from "./index";
 
 const NOW = 1_700_000_000_000;
 
@@ -238,5 +238,78 @@ describe("View", () => {
     expect(v.pick("2026-11-07", 3).map((i) => i.id)).toEqual(first);
     expect(v.pick("2026-11-07", 3, "", [first[0]!]).map((i) => i.id)).not.toContain(first[0]);
     expect(v.pick("2026-11-07", 5, "", [first[0]!]).at(-1)!.id).toBe(first[0]);
+  });
+});
+
+describe("repeat", () => {
+  // 2026-11-08 is a Sunday; 2026-11-06 a Friday.
+  const now = "2026-11-08";
+  const on = (r: Partial<Repeat>): Repeat => ({ kind: "on", every: 1, unit: "week", days: [], start: "2026-11-01", ...r });
+
+  it("about every so often: fresh, then soon, then due, from the last time", () => {
+    const r = newRepeat("about", 3, "week", now);
+    expect(repeatState({ repeat: r, log: [] }, now)).toMatchObject({ due: true, label: "not done yet" });
+    expect(repeatState({ repeat: r, log: [{ day: "2026-11-01", did: "done" }] }, now)).toMatchObject({ due: false, soon: false, label: "7 days (usually 21)" });
+    expect(repeatState({ repeat: r, log: [{ day: "2026-10-20", did: "done" }] }, now)).toMatchObject({ due: false, soon: true });
+    // A skip starts the clock again too.
+    expect(repeatState({ repeat: r, log: [{ day: "2026-10-01", did: "done" }, { day: "2026-10-18", did: "skipped" }] }, now)).toMatchObject({ due: true, ratio: 1 });
+  });
+
+  it("on a schedule: by the week, the fortnight, the day and the month", () => {
+    const fri = on({ days: [5] });
+    expect(nextOn(fri, null)).toBe("2026-11-06");
+    expect(repeatState({ repeat: fri, log: [] }, now)).toMatchObject({ due: true, label: "since Nov 6" });
+    // Done today (a Sunday, late): next Friday, the missed one doesn't come back.
+    expect(repeatState({ repeat: fri, log: [{ day: now, did: "done" }] }, now)).toMatchObject({ due: false, next: "2026-11-13", label: "next Fri" });
+    // Missed three Fridays: one due, not three.
+    expect(nextOn(fri, "2026-10-12")).toBe("2026-11-06");
+    const fortnight = on({ every: 2, days: [5], start: "2026-11-06" });
+    expect([nextOn(fortnight, "2026-11-06"), nextOn(fortnight, "2026-11-20")]).toEqual(["2026-11-20", "2026-12-04"]);
+    expect(nextOn(on({ unit: "day", every: 3, start: "2026-11-02" }), "2026-11-02")).toBe("2026-11-05");
+    expect(nextOn(on({ unit: "month", days: [31] }), null)).toBe("2026-11-30");
+    expect(nextOn(on({ unit: "month", days: [1], start: now }), null)).toBe("2026-12-01");
+    expect(nextOn(on({ unit: "month", every: 3, days: [15], start: "2026-11-15" }), "2026-11-15")).toBe("2027-02-15");
+  });
+
+  it("says the rule plainly", () => {
+    expect(repeatLabel(newRepeat("about", 1, "week", now))).toBe("About every week");
+    expect(repeatLabel(newRepeat("about", 3, "month", now))).toBe("About every 3 months");
+    expect(repeatLabel(on({ days: [5] }))).toBe("Every Friday");
+    expect(repeatLabel(on({ every: 2, days: [1, 3] }))).toBe("Every 2 weeks on Mon, Wed");
+    expect(repeatLabel(on({ unit: "month", days: [1] }))).toBe("Every month on the 1st");
+    expect(repeatLabel(on({ unit: "month", days: [31] }))).toBe("Every month on the last day");
+    expect(repeatLabel(on({ unit: "day", every: 1 }))).toBe("Every day");
+  });
+
+  it("validates the rule and the log", () => {
+    const i = validators.items({ title: "Laundry", repeat: { kind: "on", every: 1, unit: "week", days: [5, 5, 1], start: now }, log: [{ day: "2026-11-06" }] }, "a", NOW);
+    expect(i.repeat!.days).toEqual([1, 5]);
+    expect(i.log).toEqual([{ day: "2026-11-06", did: "done" }]);
+    expect(validators.items({ title: "x", repeat: { kind: "about", every: 2, unit: "week", days: [3], start: now } }, "a", NOW).repeat!.days).toEqual([]);
+    expect(() => validators.items({ title: "x", repeat: { kind: "about", every: 0, unit: "week", start: now } }, "a", NOW)).toThrow(/every/);
+    expect(() => validators.items({ title: "x", repeat: { kind: "on", every: 1, unit: "week", days: [7], start: now } }, "a", NOW)).toThrow(/days/);
+  });
+
+  it("puts due chores in their own group on Today, and keeps fresh ones out of the way", () => {
+    const v = new View(
+      state([
+        { id: "due", tier: "chip", estMinutes: 10, repeat: newRepeat("about", 1, "week", now), log: [{ day: "2026-10-30", did: "done" }] },
+        { id: "fresh", tier: "chip", estMinutes: 10, repeat: newRepeat("about", 1, "week", now), log: [{ day: "2026-11-07", did: "done" }] },
+        { id: "quick", tier: "chip", estMinutes: 10 },
+      ]),
+    );
+    const t = v.today(now);
+    expect(t.chores.map((i) => i.id)).toEqual(["due"]);
+    expect(t.quickWins.map((i) => i.id)).toEqual(["quick"]);
+    expect(v.doable().map((i) => i.id).sort()).toEqual(["due", "quick"]);
+  });
+
+  it("keeps a chore put off with Later out of Today until its day", () => {
+    const due = { id: "due", tier: "chip" as const, repeat: newRepeat("about", 1, "week", now), log: [] };
+    const later = new View(state([{ ...due, snoozedUntil: "2026-11-11" }]));
+    expect(later.today(now).chores).toEqual([]);
+    expect(later.doable(), "not offered in All either").toEqual([]);
+    expect(later.today("2026-11-11").chores.map((i) => i.id)).toEqual(["due"]);
+    expect(validators.items({ title: "x", snoozedUntil: "2026-11-11" }, "a", NOW).snoozedUntil).toBe("2026-11-11");
   });
 });

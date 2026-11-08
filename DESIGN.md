@@ -81,6 +81,10 @@ Everything is an **item**. A task is an item with a status; a project is an item
 | `nextAction` | The one concrete next step |
 | `blockedBy` | Items it waits on |
 | `doneAt` | When it was finished, skipped or dropped |
+| `repeat` | How it comes back, or null (§6.1): `{ kind: about · on, every, unit: day · week · month, days, start }` |
+| `log` | A repeating item's done and skipped days, `[{ day, did }]`, the last 100 |
+| `oneOff` | Answered "Doesn't repeat" to the Chores area's "How often?" |
+| `snoozedUntil` | Later: off Today and out of All's picks until this day (§6.1) |
 
 Skip is "didn't do it this time, and that's fine" (for chores, phase 2); Drop is "not doing it".
 A step takes its parent's tier when added. Deleting an item deletes its steps; Undo restores both.
@@ -112,7 +116,6 @@ Added with the phase that needs them (each a new migration in server `db.ts`):
 | `captures` | Raw input: typed text or audio, transcript, source (quick add, ramble), processed | 1 |
 | `proposals` | AI suggestions awaiting review: kind (new item, split, question, schedule), payload, pending / accepted / rejected | 1 |
 | `questions` | Clarify questions on an item, with my answers | 1 |
-| `cadences` | Chore rules: item, interval, tolerance, preferred day, last done, history (§6) | 2 |
 | `push_subscriptions` | Web Push endpoint and keys per device | 2 |
 | `calendar_links` | Item ↔ Google Calendar event, sync state | 3 |
 | `attachments` | File, type, item | 4 |
@@ -146,7 +149,9 @@ files in one tap: Hard · Chip · Back · Note, with an area picker. Done and de
   "from Tue", with Today / Not today.
 - **Deadlines this week**: up to 7 days out; a passed one says "was due Tue" quietly.
 - **Quick wins**: up to 3 open hard/chip items with a next step or ≤ 20 minutes, no open steps,
-  not waiting on anything; untouched longest first.
+  not waiting on anything, not repeating; untouched longest first.
+- **Chores**: repeating items that are due (§6.1), stalest first, in their own group at the end,
+  with Later and Skip. Not in the Today count.
 
 The Today count is planned + on deck + deadlines due today or passed.
 
@@ -256,23 +261,42 @@ device; temporary, like foodlab's).
 
 ## 6. Chores and reminders (phase 2, planned)
 
-### 6.1 Freshness, not due dates
+### 6.1 Repeating items (built 2026-11-08)
 
-A chore tracks time since it was last done against a target interval, instead of a fixed date
-that goes red. A missed Sunday just means it's a bit staler; the next due point moves from when
-it was actually done.
+Any task can repeat (`repeat` on the item, §4.1), in one of two ways, set on its page under
+**Repeats**:
 
-- **Rule:** an interval in days plus a tolerance. Sheets: every 21 days, ± 4. Trash: every 7,
-  preferred day Sunday.
-- **Freshness** = days since last done ÷ interval. Under 0.8 fresh (hidden), 0.8–1.0 due soon,
-  over 1.0 due, over 1.5 stale.
-- **Shown as** "Sheets: 18 days (usually 21)" with a small bar. No red dates, no "yesterday".
-- **Done** resets the clock; **Skip** resets it without counting as done (logged apart);
-  **Snooze** hides it for some days.
-- **Preferred day** (optional): the chore surfaces that morning when it's due or nearly.
-- **Hard schedules stay exact.** Bills, medication, anything time-critical uses a fixed
-  recurrence and normal reminders, not freshness.
-- **Batching:** a "Sunday reset" can be one item whose steps each have their own cadence.
+- **About every…** N days, weeks or months, counted from the last time it was done or skipped
+  (chores). A missed week just means it's a bit staler; there's no due date to go red.
+  - **Freshness** = days since last done ÷ the interval (a month counts as 30 days). Under 0.8
+    it's fresh and stays out of the way, 0.8–1 due soon, from 1 due.
+  - **Shown as** "↻ 18 days (usually 21)" with a small bar, which turns the accent color when
+    it's nearly due. Never red, never "overdue". Never done (or not known) = due now.
+- **On a schedule**: every N days, every N weeks on chosen weekdays ("every Friday" for
+  laundry), or every N months on a day (31 = the last day). Counted from **Starting**, which also
+  fixes which weeks or months count. Done counts for the latest due day; the next is the first
+  after today, so missed ones don't pile up ("since Tue", then "next Fri").
+- **No preferred day by default**: weekends stay free unless I choose otherwise. A day for
+  something is just a schedule ("every Friday").
+- **Done** (the checkbox) logs today and the item stays open for next time. **Skip this time**
+  starts the clock again without counting as done. **Drop** stops it repeating. Undo puts it
+  back. A repeating item's done steps open again when it's done, so a routine (a "Sunday reset")
+  can be one item with a checklist.
+- **Later** (snooze): Tomorrow, In 3 days or Next week. Off Today and out of All's picks until
+  then, without counting as done or skipped (the clock keeps running); "later: back Wed" on its
+  row; **Back now** on its page undoes it. Done or Skip clears it.
+- **Last done** can be set by hand (it changes the latest log entry), so a new chore starts in
+  the right place.
+- **Where it shows**: Today's **Chores** group once due (§5.3); All with its ↻ fact; the All
+  views offer it only when due. Not in Quick wins.
+- **The Chores area asks "How often does this come around?"** on a top-level task with no
+  repeat: Weekly, Every 2 weeks, Monthly, Every 3 months (all "about every…"), or "Doesn't
+  repeat" (`oneOff`), which makes the question go away. A suggestion, never required. Later the
+  clarify step (§5.6) could guess from the title.
+- **Hard schedules stay exact.** Bills and medication use "on a schedule" (and, later,
+  reminders, §6.2), not freshness.
+- **Later, if wanted**: a tolerance per chore, a history view, and
+  a separate cadence per step of a routine.
 
 ### 6.2 Notifications
 

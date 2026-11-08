@@ -1,6 +1,6 @@
-import { dayLabel, minutesLabel, today, type Item } from "@evenkeel/shared";
-import type { ReactNode } from "react";
-import { toggleDone } from "../actions";
+import { addDays, dayLabel, minutesLabel, repeatLabel, repeatState, snoozed, today, type Item } from "@evenkeel/shared";
+import { useState, type ReactNode } from "react";
+import { snooze, toggleDone, whenLabel } from "../actions";
 import { A } from "../router";
 import { useData } from "../sync";
 
@@ -29,6 +29,42 @@ export function Check({ item }: { item: Item }) {
   );
 }
 
+const LATER: { label: string; days: number }[] = [
+  { label: "Tomorrow", days: 1 },
+  { label: "In 3 days", days: 3 },
+  { label: "Next week", days: 7 },
+];
+
+/** Later (DESIGN.md §6.1): opens into Tomorrow · In 3 days · Next week; picking one puts it off till then. */
+export function LaterButton({ item }: { item: Item }) {
+  const [open, setOpen] = useState(false);
+  if (!open)
+    return (
+      <button className="btn small-btn subtle" title="Not today: back in a few days, without counting as done or skipped" aria-expanded={false} onClick={() => setOpen(true)}>
+        Later
+      </button>
+    );
+  return (
+    <span className="later-picks" role="group" aria-label={`Later: ${item.title}`}>
+      {LATER.map((l) => (
+        <button
+          key={l.days}
+          className="btn small-btn"
+          onClick={() => {
+            setOpen(false);
+            snooze(item.id, addDays(today(), l.days));
+          }}
+        >
+          {l.label}
+        </button>
+      ))}
+      <button className="btn icon subtle small-btn" aria-label="Never mind" onClick={() => setOpen(false)}>
+        ✕
+      </button>
+    </span>
+  );
+}
+
 /** The facts under a row's title: where it's from, dates, size, progress, the next step. */
 export function Facts({ item, show = {} }: { item: Item; show?: { path?: boolean; area?: boolean; scheduled?: boolean } }) {
   const { view } = useData();
@@ -47,6 +83,19 @@ export function Facts({ item, show = {} }: { item: Item; show?: { path?: boolean
       </span>,
     );
   }
+  const r = item.status === "open" ? repeatState(item, now) : null;
+  if (r && item.repeat)
+    parts.push(
+      <span key="repeat" className="fact-repeat" title={repeatLabel(item.repeat)}>
+        ↻ {r.label}
+        {r.ratio !== null && (
+          <span className="fresh-bar" aria-hidden="true">
+            <span style={{ width: `${Math.min(1, r.ratio) * 100}%` }} className={r.due ? "is-due" : r.soon ? "is-soon" : ""} />
+          </span>
+        )}
+      </span>,
+    );
+  if (item.status === "open" && snoozed(item, now)) parts.push(<span key="later">later: back {whenLabel(item.snoozedUntil!)}</span>);
   if (show.scheduled !== false && item.scheduled) parts.push(<span key="sched">📅 {dayLabel(item.scheduled, now)}</span>);
   if (item.estMinutes) parts.push(<span key="est">{minutesLabel(item.estMinutes)}</span>);
   const p = view.progress(item.id);

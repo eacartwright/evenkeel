@@ -61,6 +61,38 @@ export interface Item extends Base {
   blockedBy: Id[];
   /** When it was last marked done, skipped or dropped. */
   doneAt: number | null;
+  /** How it comes back (DESIGN.md §6.1); null = it doesn't. */
+  repeat: Repeat | null;
+  /** A repeating item's done and skipped days, oldest first (the last 100). */
+  log: LogEntry[];
+  /** Said "doesn't repeat" to the Chores area's "How often?". */
+  oneOff: boolean;
+  /** Later: kept off Today (and out of All's picks) until this day, YYYY-MM-DD. */
+  snoozedUntil: string | null;
+}
+
+export const REPEAT_KINDS = ["about", "on"] as const;
+export const REPEAT_UNITS = ["day", "week", "month"] as const;
+export type RepeatUnit = (typeof REPEAT_UNITS)[number];
+
+/**
+ * A repeating item (DESIGN.md §6.1). "about": every so often, counted from when it was last done
+ * (a chore: missing a day just makes it a bit staler). "on": on a calendar schedule, counted from
+ * `start` (every Friday, the 1st of every month).
+ */
+export interface Repeat {
+  kind: (typeof REPEAT_KINDS)[number];
+  every: number;
+  unit: RepeatUnit;
+  /** "on" by the week: the weekdays (0 = Sunday). By the month: the day of the month (one; 31 = the last). */
+  days: number[];
+  /** "on": the first day it's due (YYYY-MM-DD); also fixes which weeks or months count. */
+  start: string;
+}
+
+export interface LogEntry {
+  day: string;
+  did: "done" | "skipped";
 }
 
 /** A file attached to a dev note: a screenshot or anything else (as in foodlab). */
@@ -119,6 +151,10 @@ export const blank = {
     nextAction: "",
     blockedBy: [],
     doneAt: null,
+    repeat: null,
+    log: [],
+    oneOff: false,
+    snoozedUntil: null,
   }),
   devnote: (id: Id, text: string, path: string, now = Date.now()): DevNote => ({ ...baseOf(id, now), text, path, done: false, files: [] }),
   settings: (now = Date.now()): Settings => ({ ...baseOf(SETTINGS_ID, now), areas: [...DEFAULT_AREAS] }),

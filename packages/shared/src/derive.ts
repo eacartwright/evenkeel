@@ -1,3 +1,4 @@
+import { repeatState } from "./repeat";
 import { addDays, settingsOf, today, type Id, type Item, type State, type Tier } from "./types";
 
 // Views derived from the state (DESIGN.md §5): pure, used by the app's pages and by the server's checks.
@@ -7,6 +8,9 @@ const byPosition = (a: Item, b: Item) => a.position - b.position || a.createdAt 
 /** An item that still asks for something: an open task. Notes and finished tasks don't. */
 export const isOpen = (i: Item) => !i.deleted && i.status === "open";
 export const isNote = (i: Item) => i.status === null;
+
+/** Put off with Later: still to come today or after. */
+export const snoozed = (i: Item, day = today()) => i.snoozedUntil !== null && i.snoozedUntil > day;
 
 /** The area filter's value for "filed without an area". */
 export const NO_AREA = "-";
@@ -32,6 +36,8 @@ export interface TodayView {
   deadlines: Item[];
   /** A few small things that fit a gap: a next action or 20 minutes or less, untouched longest first. */
   quickWins: Item[];
+  /** Repeating things that are due (DESIGN.md §6.1), stalest first: their own group. */
+  chores: Item[];
 }
 
 export interface Progress {
@@ -135,10 +141,18 @@ export class View {
       .filter((i) => i.deadline !== null && i.deadline <= weekOut && !shown.has(i.id))
       .sort((a, b) => a.deadline!.localeCompare(b.deadline!));
     for (const i of deadlines) shown.add(i.id);
+    const chores = open
+      .filter((i) => i.repeat && !shown.has(i.id) && !snoozed(i, day))
+      .map((i) => ({ i, r: repeatState(i, day)! }))
+      .filter(({ r }) => r.due)
+      .sort((a, b) => (b.r.ratio ?? 99) - (a.r.ratio ?? 99) || (a.r.next ?? "").localeCompare(b.r.next ?? "") || byPosition(a.i, b.i))
+      .map(({ i }) => i);
+    for (const i of chores) shown.add(i.id);
     const quickWins = open
       .filter(
         (i) =>
           !shown.has(i.id) &&
+          !i.repeat &&
           (i.tier === "chip" || i.tier === "hard") &&
           this.children(i.id).every((c) => c.status !== "open") &&
           !this.blocked(i) &&
@@ -146,7 +160,7 @@ export class View {
       )
       .sort((a, b) => a.updatedAt - b.updatedAt)
       .slice(0, 3);
-    return { planned, onDeck, deadlines, quickWins };
+    return { planned, onDeck, deadlines, quickWins, chores };
   }
 
   /** How many things Today has (for its badge). */
@@ -226,6 +240,9 @@ export class View {
   doable(area = ""): Item[] {
     const next = (i: Item): Item | null => {
       if (!isOpen(i) || this.blocked(i)) return null;
+      // A repeating thing is offered only once it's due again.
+      if (i.repeat && !repeatState(i)!.due) return null;
+      if (snoozed(i)) return null;
       const steps = this.children(i.id).filter(isOpen);
       if (!steps.length) return i;
       for (const s of steps) {

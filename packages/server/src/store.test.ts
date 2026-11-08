@@ -38,6 +38,16 @@ describe("Store", () => {
     expect(back.rev).toBe(3);
   });
 
+  it("keeps a repeating item's rule, log and one-off answer", () => {
+    const { db, store } = fresh();
+    const repeat = { kind: "on", every: 1, unit: "week", days: [5], start: "2026-11-08" } as const;
+    store.put("items", "l", { ...blank.item("l", "Laundry"), repeat, log: [{ day: "2026-11-06", did: "done" }], snoozedUntil: "2026-11-10" });
+    store.put("items", "g", { ...blank.item("g", "Donate gifts"), oneOff: true });
+    const back = loadState(db);
+    expect(back.items.l).toMatchObject({ repeat, log: [{ day: "2026-11-06", did: "done" }], oneOff: false, snoozedUntil: "2026-11-10" });
+    expect(back.items.g).toMatchObject({ repeat: null, log: [], oneOff: true });
+  });
+
   it("keeps the first creation time", () => {
     const { store } = fresh();
     store.put("items", "a", { ...blank.item("a", "A"), createdAt: 100 }, 100);

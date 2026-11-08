@@ -60,6 +60,14 @@ const MIGRATIONS: string[] = [
   );
   ALTER TABLE dev_notes ADD COLUMN files TEXT NOT NULL DEFAULT '[]';  -- JSON [{ id, name, type }]
   `,
+  // 2026-11-08: repeating items (DESIGN.md §6.1). The rule, the done/skipped days, "doesn't
+  // repeat" (an answer to the Chores area's "How often?"), and Later (snoozed until a day).
+  `
+  ALTER TABLE items ADD COLUMN repeat TEXT;                          -- JSON { kind, every, unit, days, start }
+  ALTER TABLE items ADD COLUMN log TEXT NOT NULL DEFAULT '[]';       -- JSON [{ day, did }]
+  ALTER TABLE items ADD COLUMN one_off INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE items ADD COLUMN snoozed_until TEXT;                   -- YYYY-MM-DD
+  `,
 ];
 
 export type DB = DatabaseSync;
@@ -128,6 +136,10 @@ export function loadState(db: DB): State {
       nextAction: r.next_action,
       blockedBy: JSON.parse(r.blocked_by),
       doneAt: r.done_at,
+      repeat: r.repeat ? JSON.parse(r.repeat) : null,
+      log: JSON.parse(r.log),
+      oneOff: !!r.one_off,
+      snoozedUntil: r.snoozed_until,
     } satisfies Item;
   }
   for (const r of db.prepare("SELECT * FROM dev_notes").all() as Row[]) {
@@ -172,6 +184,10 @@ export const save = {
       next_action: x.nextAction,
       blocked_by: JSON.stringify(x.blockedBy),
       done_at: x.doneAt,
+      repeat: x.repeat ? JSON.stringify(x.repeat) : null,
+      log: JSON.stringify(x.log),
+      one_off: x.oneOff ? 1 : 0,
+      snoozed_until: x.snoozedUntil,
     });
   },
   devnotes(db: DB, x: DevNote) {

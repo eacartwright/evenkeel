@@ -1,22 +1,23 @@
 import { dayLabel, today, type Item } from "@evenkeel/shared";
-import { schedule } from "../actions";
+import { schedule, setStatus } from "../actions";
 import { A } from "../router";
 import { useData } from "../sync";
-import { ItemRow } from "./ItemRow";
+import { ItemRow, LaterButton } from "./ItemRow";
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /**
  * Today (DESIGN.md §5.3): what's planned, what was planned earlier and is still on deck (never
- * red, never "overdue"), real deadlines in the next week, and a few quick wins for a gap.
+ * red, never "overdue"), real deadlines in the next week, a few quick wins for a gap, and chores
+ * that have come around again (§6.1), in their own group at the end.
  */
 export function TodayPage() {
   const { view } = useData();
   const day = today();
   const t = view.today(day);
   const d = new Date();
-  const nothing = !t.planned.length && !t.onDeck.length && !t.deadlines.length && !t.quickWins.length;
+  const nothing = !t.planned.length && !t.onDeck.length && !t.deadlines.length && !t.quickWins.length && !t.chores.length;
   const inbox = view.inbox().length;
 
   const notToday = (i: Item) => (
@@ -80,6 +81,18 @@ export function TodayPage() {
           {t.quickWins.map((i) => (
             <ItemRow key={i.id} item={i}>
               {planIt(i)}
+            </ItemRow>
+          ))}
+        </Section>
+      )}
+      {t.chores.length > 0 && (
+        <Section title="Chores" note="Come around again. Do one, put it off till later, or skip it this time.">
+          {t.chores.map((i) => (
+            <ItemRow key={i.id} item={i}>
+              <LaterButton item={i} />
+              <button className="btn small-btn subtle" title="Not this time: starts the clock again without counting as done" onClick={() => setStatus(i.id, "skipped")}>
+                Skip
+              </button>
             </ItemRow>
           ))}
         </Section>

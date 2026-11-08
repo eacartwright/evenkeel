@@ -1,4 +1,4 @@
-import { ENERGIES, SETTINGS_ID, STATUSES, TIERS, type Attachment, type DevNote, type Item, type Kind, type Records, type Settings } from "./types";
+import { ENERGIES, REPEAT_KINDS, REPEAT_UNITS, SETTINGS_ID, STATUSES, TIERS, type Attachment, type DevNote, type Item, type Kind, type LogEntry, type Records, type Repeat, type Settings } from "./types";
 
 // Turns a request body into a clean record, or says what's wrong. The server runs these on
 // every save; links to other records are checked separately (server/store.ts), since that needs state.
@@ -83,7 +83,43 @@ function item(body: unknown, recId: string, now: number): Item {
     blockedBy: ids(b.blockedBy, "blockedBy").filter((x) => x !== recId),
     // Only a finished task has a finish time.
     doneAt: status && status !== "open" ? (num(b.doneAt, "doneAt") ?? now) : null,
+    repeat: repeat(b.repeat),
+    log: log(b.log),
+    oneOff: bool(b.oneOff),
+    snoozedUntil: date(b.snoozedUntil, "snoozedUntil"),
   };
+}
+
+function repeat(x: unknown): Repeat | null {
+  if (x === undefined || x === null) return null;
+  const b = obj(x);
+  const kind = oneOf(b.kind, REPEAT_KINDS, "repeat.kind")!;
+  const unit = oneOf(b.unit, REPEAT_UNITS, "repeat.unit")!;
+  if (!kind || !unit) throw new Invalid("repeat: needs a kind and a unit");
+  const every = num(b.every, "repeat.every", 1, 999);
+  if (every === null || !Number.isInteger(every)) throw new Invalid("repeat.every: a whole number from 1");
+  const start = date(b.start, "repeat.start");
+  if (!start) throw new Invalid("repeat.start: required");
+  if (b.days !== undefined && !Array.isArray(b.days)) throw new Invalid("repeat.days: expected a list");
+  const max = unit === "week" ? 6 : unit === "month" ? 31 : -1;
+  const days = [...new Set(((b.days as unknown[] | undefined) ?? []).map((d) => num(d, "repeat.days", unit === "month" ? 1 : 0, max)))]
+    .filter((d): d is number => d !== null && Number.isInteger(d))
+    .sort((p, q) => p - q);
+  // Only a schedule by the week has several days; by the month, one; otherwise none.
+  return { kind, every, unit, days: kind === "on" && unit === "week" ? days : kind === "on" && unit === "month" ? days.slice(0, 1) : [], start };
+}
+
+function log(x: unknown): LogEntry[] {
+  if (x === undefined || x === null) return [];
+  if (!Array.isArray(x)) throw new Invalid("log: expected a list");
+  return x
+    .map((e) => {
+      const b = obj(e);
+      return { day: date(b.day, "log.day")!, did: oneOf(b.did, ["done", "skipped"] as const, "log.did", "done")! };
+    })
+    .filter((e) => e.day)
+    .sort((a, b) => a.day.localeCompare(b.day))
+    .slice(-100);
 }
 
 const FILE_ID = /^[0-9a-f-]{36}$/;

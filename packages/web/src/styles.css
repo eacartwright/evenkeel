@@ -1952,3 +1952,87 @@ ul.notes li.done .note-text {
   gap: 6px;
   margin-top: 10px;
 }
+
+/* ---- repeating items (DESIGN.md §6.1) ---- */
+/* How it stands, with a small bar of how much of the interval has passed. Calm: never red. */
+.fact-repeat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.fresh-bar {
+  display: inline-block;
+  width: 42px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.fresh-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--border-strong);
+}
+.fresh-bar > span.is-soon,
+.fresh-bar > span.is-due {
+  background: var(--primary);
+}
+.repeat-input {
+  align-items: flex-start;
+}
+.repeat-input .inline {
+  flex-wrap: wrap;
+}
+.input.narrow.every-input {
+  width: 4.5em;
+}
+.weekdays {
+  display: inline-flex;
+  gap: 4px;
+}
+.weekday {
+  width: var(--tap);
+  height: var(--tap);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.weekday.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.weekday:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* The Chores area's "How often?": a suggestion, in the accent's soft color like the next step. */
+.how-often {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+}
+.how-often-q {
+  font-weight: 700;
+}
+.how-often-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* Later's three choices, in place of the button. */
+.later-picks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}

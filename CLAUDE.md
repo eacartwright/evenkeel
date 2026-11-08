@@ -27,7 +27,8 @@ Data is `data/evenkeel.db` (SQLite, git-ignored, per machine). Test against a sc
   `today`, `addDays`, `dayLabel`, `minutesLabel`), `validate.ts` (body → clean record, run by the
   server on every save), `capture.ts` (`captureLines`: lines → items, indent = step;
   `fromShared`), `derive.ts` (`View`: children / ancestors / `wouldLoop`, `progress`, `inbox`,
-  `today`, `all`, `areas`, `blocked`). Pure; tests in `shared.test.ts`.
+  `today`, `all`, `areas`, `blocked`), `repeat.ts` (repeating items: `repeatState`, `nextOn`,
+  `repeatLabel`, `logged`, `newRepeat`; DESIGN.md §6.1). Pure; tests in `shared.test.ts`.
 - `packages/server` — Node + Hono + `node:sqlite` (Node ≥ 22.13). `db.ts`: tables `items`,
   `dev_notes`, `settings` (one row, `app`), `meta.rev`; `loadState` / `save.<kind>`. `store.ts`:
   the state in memory; `put(kind, id, body)` validates, checks parents (exist, no loops) and
@@ -88,6 +89,12 @@ ones. Deletions are tombstones (`deleted`), restorable with Undo or the page's R
 - 2026-11-08, Evan's dev notes: Dev Notes and Settings brought up to foodlab's (edit, attach or
   paste files, link to the page or not, Copy; Settings sections with Experimental → fonts).
   Migration 2: `files` table + `dev_notes.files`. 30 tests; headless check on a copy of the
-  laptop DB. Still open: **repeating tasks** (chores; maybe suggest a repeat for the Chores area).
+  laptop DB.
+- 2026-11-08: **Repeating items built** (DESIGN.md §6.1, Evan's choices): "about every…"
+  (freshness) and "on a schedule" (e.g. every Friday); no preferred day by default (weekends
+  free); due ones in their own **Chores** group on Today; the Chores area asks "How often?".
+  **Later** (snooze: Tomorrow, In 3 days, Next week). Migration 3: `items.repeat`, `log`,
+  `one_off`, `snoozed_until`. 37 tests; headless check on a copy of the laptop DB. Not yet: push
+  reminders (§6.2; Web Push works for the installed app on Android, no native app needed).
 - **Next:** settle the views from use; run it on NOSTROMO; then ramble capture and the clarify interview (DESIGN.md §5.6),
   reusing foodlab's `ai.ts`.

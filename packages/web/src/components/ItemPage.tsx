@@ -1,10 +1,10 @@
-import { ENERGIES, ENERGY_LABEL, TIERS, TIER_LABEL, today, type Item } from "@evenkeel/shared";
+import { dayLabel, ENERGIES, ENERGY_LABEL, lastDone, snoozed, newRepeat, REPEAT_UNITS, repeatLabel, repeatState, TIERS, TIER_LABEL, today, type Item, type Repeat, type RepeatUnit } from "@evenkeel/shared";
 import { useRef, useState } from "react";
-import { createItem, move, remove, schedule, setNote, setStatus, update } from "../actions";
+import { createItem, move, remove, schedule, setLastDone, setNote, setRepeat, setStatus, snooze, update } from "../actions";
 import { A, go } from "../router";
 import { useData } from "../sync";
 import { DraftInput, DraftTextarea, Field, NumberInput, Segmented, TitleInput } from "./controls";
-import { Check, ItemRow, itemPath } from "./ItemRow";
+import { Check, ItemRow, itemPath, LaterButton } from "./ItemRow";
 
 /**
  * One item (DESIGN.md §5.5): a task, a project (it has steps) or a note, and any of them can
@@ -67,6 +67,8 @@ export function ItemPage({ id }: { id: string }) {
         </div>
       )}
 
+      {isTask && !item.repeat && !item.oneOff && !item.parentId && view.areaOf(item).toLowerCase() === "chores" && <HowOften id={id} />}
+
       <div className="fields">
         <Field label="Kind">
           <Segmented value={isTask ? "task" : "note"} options={["task", "note"] as const} labels={{ task: "Task", note: "Note" }} clearable={false} onChange={(v) => setNote(id, v === "note")} />
@@ -81,6 +83,9 @@ export function ItemPage({ id }: { id: string }) {
         </Field>
         {isTask && (
           <>
+            <Field label="Repeats">
+              <RepeatInput item={item} />
+            </Field>
             <Field label="Deadline">
               <DateInput value={item.deadline} onChange={(deadline) => set({ deadline })} />
             </Field>
@@ -138,10 +143,18 @@ export function ItemPage({ id }: { id: string }) {
       <div className="page-foot">
         {item.status === "open" && (
           <>
-            <button className="btn" onClick={() => setStatus(id, "skipped")} title="Didn't do it this time, and that's fine">
-              Skip
+            <button className="btn" onClick={() => setStatus(id, "skipped")} title={item.repeat ? "Not this time: starts the clock again without counting as done" : "Didn't do it this time, and that's fine"}>
+              {item.repeat ? "Skip this time" : "Skip"}
             </button>
-            <button className="btn" onClick={() => setStatus(id, "dropped")} title="Not going to do it">
+            {item.repeat &&
+              (snoozed(item) ? (
+                <button className="btn" title={`Put off until ${dayLabel(item.snoozedUntil!)}`} onClick={() => snooze(id, null)}>
+                  Back now
+                </button>
+              ) : (
+                <LaterButton item={item} />
+              ))}
+            <button className="btn" onClick={() => setStatus(id, "dropped")} title={item.repeat ? "Not doing it any more (it stops coming back)" : "Not going to do it"}>
               Drop
             </button>
           </>
@@ -168,11 +181,146 @@ export function ItemPage({ id }: { id: string }) {
   );
 }
 
-function DateInput({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+const HOW_OFTEN: { label: string; every: number; unit: RepeatUnit }[] = [
+  { label: "Weekly", every: 1, unit: "week" },
+  { label: "Every 2 weeks", every: 2, unit: "week" },
+  { label: "Monthly", every: 1, unit: "month" },
+  { label: "Every 3 months", every: 3, unit: "month" },
+];
+
+/** In the Chores area, a quiet "How often?" (DESIGN.md §6.1): a suggestion, gone once answered. */
+function HowOften({ id }: { id: string }) {
+  return (
+    <div className="how-often">
+      <span className="how-often-q">How often does this come around?</span>
+      <span className="how-often-picks">
+        {HOW_OFTEN.map((p) => (
+          <button key={p.label} className="btn small-btn" onClick={() => setRepeat(id, newRepeat("about", p.every, p.unit))}>
+            {p.label}
+          </button>
+        ))}
+        <button className="btn small-btn subtle" onClick={() => update(id, { oneOff: true })}>
+          Doesn't repeat
+        </button>
+      </span>
+    </div>
+  );
+}
+
+const UNIT_LABEL: Record<RepeatUnit, [string, string]> = { day: ["day", "days"], week: ["week", "weeks"], month: ["month", "months"] };
+const WEEKDAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
+const WEEKDAY_NAME = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** How it repeats (DESIGN.md §6.1): not at all, about every so often, or on a schedule. */
+function RepeatInput({ item }: { item: Item }) {
+  const r = item.repeat;
+  const set = (change: Partial<Repeat>) => r && setRepeat(item.id, { ...r, ...change });
+  const state = repeatState(item);
+  return (
+    <div className="stack repeat-input">
+      <Segmented
+        value={r ? r.kind : "no"}
+        options={["no", "about", "on"] as const}
+        labels={{ no: "No", about: "About every…", on: "On a schedule" }}
+        clearable={false}
+        onChange={(k) => {
+          if (k === "no") setRepeat(item.id, null);
+          else if (k && k !== r?.kind) setRepeat(item.id, newRepeat(k, r?.every ?? 1, r?.unit ?? "week"));
+        }}
+      />
+      {r && (
+        <>
+          <span className="inline">
+            Every
+            <NumberInput
+              className="input narrow every-input"
+              aria-label="Every how many"
+              inputMode="numeric"
+              value={r.every}
+              onCommit={(n) => n && n >= 1 && set({ every: Math.min(999, Math.round(n)) })}
+            />
+            <select
+              className="select"
+              aria-label="Days, weeks or months"
+              value={r.unit}
+              onChange={(e) => {
+                const unit = e.target.value as RepeatUnit;
+                setRepeat(item.id, { ...newRepeat(r.kind, r.every, unit), start: r.start });
+              }}
+            >
+              {REPEAT_UNITS.map((u) => (
+                <option key={u} value={u}>
+                  {UNIT_LABEL[u][r.every === 1 ? 0 : 1]}
+                </option>
+              ))}
+            </select>
+          </span>
+          {r.kind === "on" && r.unit === "week" && (
+            <span className="weekdays" role="group" aria-label="On">
+              {WEEKDAY_LETTER.map((l, d) => {
+                const on = r.days.includes(d);
+                return (
+                  <button
+                    key={d}
+                    className={`weekday ${on ? "on" : ""}`}
+                    aria-pressed={on}
+                    aria-label={WEEKDAY_NAME[d]}
+                    title={WEEKDAY_NAME[d]}
+                    onClick={() => {
+                      const days = on ? r.days.filter((x) => x !== d) : [...r.days, d];
+                      if (days.length) set({ days });
+                    }}
+                  >
+                    {l}
+                  </button>
+                );
+              })}
+            </span>
+          )}
+          {r.kind === "on" && r.unit === "month" && (
+            <span className="inline">
+              On day
+              <NumberInput
+                className="input narrow every-input"
+                aria-label="Day of the month"
+                inputMode="numeric"
+                value={r.days[0] ?? null}
+                onCommit={(n) => n && n >= 1 && set({ days: [Math.min(31, Math.round(n))] })}
+              />
+              <span className="muted small">31 = the last day</span>
+            </span>
+          )}
+          {r.kind === "on" && (
+            <span className="inline">
+              Starting
+              <DateInput label="Starting" clearable={false} value={r.start} onChange={(start) => start && set({ start })} />
+            </span>
+          )}
+          <span className="inline">
+            Last done
+            <DateInput label="Last done" value={lastDone(item)} onChange={(day) => setLastDone(item.id, day)} />
+            {lastDone(item) !== today() && (
+              <button className="btn small-btn" onClick={() => setLastDone(item.id, today())}>
+                Today
+              </button>
+            )}
+          </span>
+          <span className="muted small">
+            {repeatLabel(r)}
+            {state && ` · ${state.label}`}
+            {r.kind === "about" && !lastDone(item) && " (so it's due now)"}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function DateInput({ value, onChange, clearable = true, label }: { value: string | null; onChange: (v: string | null) => void; clearable?: boolean; label?: string }) {
   return (
     <span className="inline">
-      <input className="input narrow date-input" type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} />
-      {value && (
+      <input className="input narrow date-input" type="date" aria-label={label} value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} />
+      {value && clearable && (
         <button className="btn icon subtle" aria-label="Clear the date" onClick={() => onChange(null)}>
           ✕
         </button>
