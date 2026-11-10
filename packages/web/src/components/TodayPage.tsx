@@ -14,11 +14,29 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
  */
 export function TodayPage() {
   const { view } = useData();
+  const d = new Date();
+  const inbox = view.inbox().length;
+  return (
+    <div className="page">
+      <h1 className="page-title">
+        Today <span className="muted today-date">{`${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`}</span>
+      </h1>
+      {inbox > 0 && (
+        <A href="/inbox" className="inbox-nudge">
+          📥 {inbox} in the inbox to sort
+        </A>
+      )}
+      <TodayLists />
+    </div>
+  );
+}
+
+/** Today's groups, on the Today page and under Capture (DESIGN.md §5.1). `brief` says less when there's nothing. */
+export function TodayLists({ brief = false }: { brief?: boolean }) {
+  const { view } = useData();
   const day = today();
   const t = view.today(day);
-  const d = new Date();
   const nothing = !t.planned.length && !t.onDeck.length && !t.deadlines.length && !t.quickWins.length && !t.chores.length;
-  const inbox = view.inbox().length;
 
   const notToday = (i: Item) => (
     <button className="btn small-btn subtle" title="Take it off today's plan" onClick={() => schedule(i.id, null)}>
@@ -32,16 +50,9 @@ export function TodayPage() {
   );
 
   return (
-    <div className="page">
-      <h1 className="page-title">
-        Today <span className="muted today-date">{`${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`}</span>
-      </h1>
-      {inbox > 0 && (
-        <A href="/inbox" className="inbox-nudge">
-          📥 {inbox} in the inbox to sort
-        </A>
-      )}
-      {nothing && (
+    <>
+      {nothing && brief && <p className="muted small">Nothing planned for today.</p>}
+      {nothing && !brief && (
         <div className="empty">
           <p>Nothing planned for today.</p>
           <p className="small">Open something in All and plan it for a day, or give a deadline.</p>
@@ -97,7 +108,7 @@ export function TodayPage() {
           ))}
         </Section>
       )}
-    </div>
+    </>
   );
 }
 

@@ -121,7 +121,7 @@ describe("View", () => {
     expect(v.ancestors("c").map((i) => i.id)).toEqual(["a", "b"]);
   });
 
-  it("puts unfiled top-level things in the inbox, in the order captured", () => {
+  it("puts unfiled top-level things in the inbox, one capture in the order written", () => {
     const v = new View(
       state([
         { id: "old" },
@@ -133,6 +133,19 @@ describe("View", () => {
       ]),
     );
     expect(v.inbox().map((i) => i.id)).toEqual(["old", "note", "new"]);
+  });
+
+  it("puts the newest capture at the top of the inbox", () => {
+    const v = new View(
+      state([
+        { id: "a1" },
+        { id: "a2", createdAt: NOW + 5 },
+        { id: "b1", createdAt: NOW + 60_000 },
+        { id: "b2", createdAt: NOW + 60_010 },
+        { id: "c", createdAt: NOW + 120_000 },
+      ]),
+    );
+    expect(v.inbox().map((i) => i.id)).toEqual(["c", "b1", "b2", "a1", "a2"]);
   });
 
   it("builds Today without nagging about missed days", () => {

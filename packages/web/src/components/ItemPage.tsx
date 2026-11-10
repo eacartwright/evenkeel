@@ -59,6 +59,37 @@ export function ItemPage({ id }: { id: string }) {
       </div>
 
       {isTask && (
+        <div className="item-actions" role="group" aria-label="Done, skip or drop">
+          {item.status === "open" && (
+            <>
+              <button className="btn primary" onClick={() => setStatus(id, "done")} title={item.repeat ? "Done for this time: it comes around again" : undefined}>
+                Done
+              </button>
+              <button className="btn" onClick={() => setStatus(id, "skipped")} title={item.repeat ? "Not this time: starts the clock again without counting as done" : "Didn't do it this time, and that's fine"}>
+                {item.repeat ? "Skip this time" : "Skip"}
+              </button>
+              {item.repeat &&
+                (snoozed(item) ? (
+                  <button className="btn" title={`Put off until ${dayLabel(item.snoozedUntil!)}`} onClick={() => snooze(id, null)}>
+                    Back now
+                  </button>
+                ) : (
+                  <LaterButton item={item} full />
+                ))}
+              <button className="btn" onClick={() => setStatus(id, "dropped")} title={item.repeat ? "Not doing it any more (it stops coming back)" : "Not going to do it"}>
+                Drop
+              </button>
+            </>
+          )}
+          {item.status !== null && item.status !== "open" && (
+            <button className="btn" onClick={() => setStatus(id, "open")}>
+              Open again
+            </button>
+          )}
+        </div>
+      )}
+
+      {isTask && (
         <div className="next-box">
           <label className="field-label" htmlFor="next-action">
             Next step
@@ -68,6 +99,27 @@ export function ItemPage({ id }: { id: string }) {
       )}
 
       {isTask && !item.repeat && !item.oneOff && !item.parentId && view.areaOf(item).toLowerCase() === "chores" && <HowOften id={id} />}
+
+      <section className="section">
+        <div className="section-head">
+          <h3>
+            Steps {steps.length > 0 && <span className="muted count">{`${view.progress(id).done}/${view.progress(id).total}`}</span>}
+          </h3>
+        </div>
+        <div className="rows">
+          {steps.map((s, n) => (
+            <ItemRow key={s.id} item={s} show={{ path: false }}>
+              <button className="btn icon subtle small-btn" aria-label={`Move “${s.title}” up`} disabled={n === 0} onClick={() => move(s.id, -1)}>
+                ↑
+              </button>
+              <button className="btn icon subtle small-btn" aria-label={`Move “${s.title}” down`} disabled={n === steps.length - 1} onClick={() => move(s.id, 1)}>
+                ↓
+              </button>
+            </ItemRow>
+          ))}
+        </div>
+        <AddStep parentId={id} />
+      </section>
 
       <div className="fields">
         <Field label="Kind">
@@ -119,52 +171,7 @@ export function ItemPage({ id }: { id: string }) {
         <DraftTextarea className="input body-input" aria-label="Notes" value={item.body} onCommit={(body) => set({ body })} />
       </section>
 
-      <section className="section">
-        <div className="section-head">
-          <h3>
-            Steps {steps.length > 0 && <span className="muted count">{`${view.progress(id).done}/${view.progress(id).total}`}</span>}
-          </h3>
-        </div>
-        <div className="rows">
-          {steps.map((s, n) => (
-            <ItemRow key={s.id} item={s} show={{ path: false }}>
-              <button className="btn icon subtle small-btn" aria-label={`Move “${s.title}” up`} disabled={n === 0} onClick={() => move(s.id, -1)}>
-                ↑
-              </button>
-              <button className="btn icon subtle small-btn" aria-label={`Move “${s.title}” down`} disabled={n === steps.length - 1} onClick={() => move(s.id, 1)}>
-                ↓
-              </button>
-            </ItemRow>
-          ))}
-        </div>
-        <AddStep parentId={id} />
-      </section>
-
       <div className="page-foot">
-        {item.status === "open" && (
-          <>
-            <button className="btn" onClick={() => setStatus(id, "skipped")} title={item.repeat ? "Not this time: starts the clock again without counting as done" : "Didn't do it this time, and that's fine"}>
-              {item.repeat ? "Skip this time" : "Skip"}
-            </button>
-            {item.repeat &&
-              (snoozed(item) ? (
-                <button className="btn" title={`Put off until ${dayLabel(item.snoozedUntil!)}`} onClick={() => snooze(id, null)}>
-                  Back now
-                </button>
-              ) : (
-                <LaterButton item={item} full />
-              ))}
-            <button className="btn" onClick={() => setStatus(id, "dropped")} title={item.repeat ? "Not doing it any more (it stops coming back)" : "Not going to do it"}>
-              Drop
-            </button>
-          </>
-        )}
-        {item.status !== null && item.status !== "open" && (
-          <button className="btn" onClick={() => setStatus(id, "open")}>
-            Open again
-          </button>
-        )}
-        <span className="spacer" />
         {!item.deleted && (
           <button
             className="btn danger"
@@ -402,7 +409,7 @@ function WaitsOn({ item }: { item: Item }) {
         );
       })}
       <select className="select" aria-label="Add something this waits on" value="" onChange={(e) => e.target.value && update(item.id, { blockedBy: [...item.blockedBy, e.target.value] })}>
-        <option value="">{item.blockedBy.length ? "Also waits on…" : "Nothing. Waits on…"}</option>
+        <option value="">+ Add</option>
         {options.map((o) => (
           <option key={o.id} value={o.id}>
             {o.title}

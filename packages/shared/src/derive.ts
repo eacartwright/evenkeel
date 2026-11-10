@@ -112,11 +112,22 @@ export class View {
     return Math.max(now, (list.at(-1)?.position ?? 0) + 1);
   }
 
-  /** What's waiting to be filed: top-level, still in the inbox, not finished. In the order captured, so a ramble reads as it was said. */
+  /**
+   * What's waiting to be filed: top-level, still in the inbox, not finished. The newest capture
+   * first, so it shows right under the box; within one capture, in the order written, so a
+   * ramble reads as it was said. A capture is the things made within 2 s of each other.
+   */
   inbox(): Item[] {
-    return this.children_(null)
+    const asc = this.children_(null)
       .filter((i) => i.tier === "inbox" && (i.status === "open" || i.status === null))
       .sort((a, b) => a.createdAt - b.createdAt || byPosition(a, b));
+    const batches: Item[][] = [];
+    for (const i of asc) {
+      const last = batches.at(-1);
+      if (last && i.createdAt - last.at(-1)!.createdAt < 2000) last.push(i);
+      else batches.push([i]);
+    }
+    return batches.reverse().flat();
   }
 
   private children_(parentId: Id | null) {

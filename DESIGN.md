@@ -53,9 +53,10 @@ port 8083, `https://evenkeel.evans.tools` behind Cloudflare Access (docs/runbook
    *Done when* a 10-minute ramble becomes reviewed inbox items, and a vague admin task has a
    next action and a "have ready" checklist.
 2. **Chores and reminders** (§6). Cadences with freshness instead of overdue, Web Push, Todoist
-   import. *Done when* the Sunday chores run here for 3 weeks and Todoist isn't opened.
+   import; habits (§6.3) once talked through. *Done when* the Sunday chores run here for 3 weeks and Todoist isn't opened.
    Todoist gets cancelled after this phase.
-3. **Planning and calendar** (§7). "I have time this weekend", estimates, one Google Calendar.
+3. **Planning and calendar** (§7). "I have time this weekend", estimates, one Google Calendar
+   synced both ways, and a calendar view of our own.
    *Done when* a weekend plan is proposed, accepted, and shows up in Google Calendar.
 4. **Notes** (§8). Markdown view, attachments, folders/tags, notes as `.md` files, Obsidian
    import. *Done when* a home project (the kitchen renovation) lives here as one note with its
@@ -134,12 +135,15 @@ One box, one thing per line, straight into the inbox. List markers and checkboxe
 (`- [ ]`, `*`, `1.`; `[x]` makes it done); an **indented line becomes a step** of the line above,
 so a pasted Todoist or Obsidian list keeps its shape. Tab indents. Ctrl+Enter adds. Lines over
 200 characters get a cut title with the whole text in the body. The draft survives closing the
-app. **Quick add** (+, Alt+N) adds one thing; "Today" also plans it for today. **Share to
+app. Under the box: the newest five in the inbox, then **Today** (§5.3's groups, "Open Today →"),
+so the landing page is also where the day starts (from Evan's dev notes, 2026-11-09). **Quick add** (+, Alt+N) adds one thing; "Today" also plans it for today. **Share to
 Evenkeel** from Android opens Quick add with the shared title and the link in the notes.
 
 ### 5.2 Inbox (`/inbox`)
 
-Unfiled top-level items, **in the order captured** (a ramble reads as it was said). Each row
+Unfiled top-level items, **the newest capture first** (so it shows right under the box on
+Capture), and within one capture in the order written (a ramble reads as it was said; a capture
+is whatever was made within 2 seconds of each other). Each row
 files in one tap: Hard · Chip · Back · Note, with an area picker. Done and delete are there too.
 
 ### 5.3 Today (`/today`)
@@ -179,10 +183,15 @@ exist, it should pick by those instead of a shuffle.
 
 ### 5.5 Item (`/items/<id>`)
 
-Title with its box; the **Next step** box up top (the clarify interview will fill it); Kind
-(Task/Note), Where (tier), Area, Deadline, Planned for (+ Today), Takes (min), Energy, Waits on;
-Notes; Steps (add with Enter, reorder ↑↓, tick off); Skip · Drop · Delete. Everything saves as
-you go (`DraftInput` on Enter or leaving the box, as in foodlab).
+Top to bottom, so the things used most need no scrolling (from Evan's dev notes, 2026-11-09):
+title with its box; **Done · Skip · Later · Drop** (Later and "Back now" on repeating items; Open
+again once finished); the **Next step** box (the clarify interview will fill it); **Steps** (add
+with Enter, reorder ↑↓, tick off); Kind (Task/Note), Where (tier), Area, Repeats, Deadline,
+Planned for (+ Today), Takes (min), Energy, Waits on (picked with "+ Add"); Notes; Delete at the
+foot. Everything saves as you go (`DraftInput` on Enter or leaving the box, as in foodlab).
+
+**Steps from a list.** In any list, a row's "1/3 steps" is a button: it opens the steps under the
+row, to tick off without opening the item (▸ turns to ▾). The title still opens the item.
 
 ### 5.6 Next: AI (phase 1, part 2)
 
@@ -320,6 +329,19 @@ Web Push from the installed PWA; the server decides when, the phone only receive
   optimization on the phone. If Web Push proves unreliable, send to a self-hosted ntfy topic
   instead (same scheduler, different sender).
 
+### 6.3 Habits (planned, from Evan's dev notes, 2026-11-09)
+
+A habit tracker: things I want to do regularly for myself (exercise, reading, water), as opposed
+to chores that need doing. To be talked through before it's built. Starting points:
+
+- Probably a repeating item marked as a habit, so it reuses `repeat` and `log` (§6.1) rather than
+  a new record.
+- A history to look at: a grid of days per habit (the log already holds it).
+- The no-guilt rule holds: no broken-streak alarms, no red. Maybe "4 of the last 7 days" rather
+  than a streak that resets to zero.
+- Open: where it lives (Today, its own page, or both); whether a habit can be done more than once
+  a day; whether it notifies (§6.2).
+
 ## 7. Planning and calendar (phase 3, planned)
 
 **"I have time this weekend."** In: a time window, optionally energy and where I am (home,
@@ -331,6 +353,12 @@ time and an order. Accepted ones get planned (`scheduled`) and, with sync, a cal
 **Google Calendar**, one calendar (the three leftover Todoist calendars go first). OAuth for one
 user. Busy time feeds the planner; planned items become events tagged with the item id; moving
 or deleting the event updates the item on the next sync.
+
+**Our own calendar view** (from Evan's dev notes, 2026-11-09): a calendar page in the app, not only
+sync out to Google. Day, week and month, showing Google Calendar events beside planned items,
+deadlines and chores coming due, so the week can be seen and planned in one place. Moving an item
+to another day plans it for that day (and moves its event). Events stay read-mostly; Google is
+still where they're made.
 
 ## 8. Notes (phase 4, planned)
 

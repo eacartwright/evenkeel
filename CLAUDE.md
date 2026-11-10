@@ -103,5 +103,9 @@ and a database never runs the same migration twice). An extra migration costs no
   `controls.tsx`; new only via "+ Add", after a typed "Ch" became an area); Settings → Areas
   renames (items follow, merging onto an existing name), reorders and deletes areas (Undo).
   Later is full size on an item's page.
+- 2026-11-09, Evan's dev notes: newest capture at the top of the inbox; Today under Capture;
+  an item's page has Done · Skip · Later · Drop under the title and Steps above the fields;
+  "1/3 steps" in any list opens the steps under the row. Planned in DESIGN.md: our own calendar
+  view (§7) and habits (§6.3, to talk through first). 38 tests; headless check on a scratch DB.
 - **Next:** settle the views from use; run it on NOSTROMO; then ramble capture and the clarify interview (DESIGN.md §5.6),
   reusing foodlab's `ai.ts`.

@@ -2055,3 +2055,107 @@ ul.notes li.done .note-text {
   min-width: 4.5em;
   text-align: right;
 }
+
+/* A row's link covers the whole title-and-facts area; the steps button sits above it. */
+.item-row .row-main {
+  position: relative;
+}
+.item-row .row-link {
+  color: var(--text);
+  text-decoration: none;
+}
+.item-row .row-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.item-row .row-link:hover {
+  text-decoration: none;
+}
+.item-row.is-finished .row-link,
+.item-row.is-quiet .row-link {
+  color: var(--muted);
+}
+.steps-toggle {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: -1px -6px;
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.steps-toggle:hover,
+.steps-toggle.open {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.steps-caret {
+  display: inline-block;
+  font-size: 0.75em;
+  transition: transform 0.12s;
+}
+.steps-toggle.open .steps-caret {
+  transform: rotate(90deg);
+}
+/* The steps, opened under their row. */
+.row-steps {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 6px 30px;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+}
+.row-steps.tight {
+  margin-left: 22px;
+}
+.row-steps .row {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+.row-steps + .row {
+  border-top: 1px solid var(--border);
+}
+/* Done, Skip, Later and Drop under an item's title, where they're reached without scrolling. */
+.item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+.item-page .page-foot {
+  justify-content: flex-end;
+}
+/* Today under Capture: a heading of its own over Today's groups. */
+.capture-today {
+  margin-top: 34px;
+}
+.capture-today > .section-head {
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+.capture-today > .section-head h2 {
+  font-size: 1.3rem;
+  flex: 1;
+  margin: 0;
+}
+.capture-today .section {
+  margin-top: 14px;
+}
+.item-page .add-step {
+  margin-bottom: 22px;
+}
+@media (max-width: 860px) {
+  /* A thumb-sized target for opening a row's steps. */
+  .steps-toggle {
+    margin: -4px -8px;
+    padding: 4px 8px;
+  }
+}
