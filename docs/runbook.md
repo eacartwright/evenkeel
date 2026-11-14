@@ -60,7 +60,10 @@ Legend: **[Evan]** = needs Evan.
 
 - **Update** after a push to `main`: the **Update Evenkeel** shortcut on the desktop (it runs
   `.\scripts\update.ps1` in `C:\Apps\evenkeel` as admin).
-  The installed app offers **↻ Update** next time it's opened.
+  The installed app offers **↻ Update** next time it's opened. Or from a dev machine:
+  `ssh ripley-deploy evenkeel`. **Deploys over SSH** (all the apps in `C:\Apps`) are set up in
+  foodlab's runbook ("Deploys over SSH"): a key locked to `C:\Apps\deploy.ps1`, which runs an
+  app's `scripts\update.ps1` and nothing else.
 - **Health:** `Invoke-RestMethod http://127.0.0.1:8083/api/health`.
 - **Restore a backup:** `Stop-ScheduledTask evenkeel`, copy the backup over `data\evenkeel.db`,
   delete `data\evenkeel.db-wal` and `-shm`, `Start-ScheduledTask evenkeel`.
