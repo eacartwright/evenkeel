@@ -7,6 +7,11 @@ section before changing behavior, and update it when a decision changes. Same st
 conventions as foodlab (`C:\Dev\foodlab`) and sideshow (`C:\Dev\sideshow`); when in doubt, do it
 the way foodlab does (much of this was copied from it).
 
+**Playbook:** built with the **phone-and-desktop** playbook (`C:\Dev\playbooks\phone-and-desktop`,
+github.com/eacartwright/playbooks): the shared stack, sync, hosting, UI and AI standards across
+sideshow, foodlab and evenkeel. When a standard changes here, or something here gets built in a
+second app, update the playbook in the same session (its README, "Keeping it alive").
+
 ## Run / test
 
 ```sh
