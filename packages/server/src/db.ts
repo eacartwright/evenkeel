@@ -68,6 +68,11 @@ const MIGRATIONS: string[] = [
   ALTER TABLE items ADD COLUMN one_off INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE items ADD COLUMN snoozed_until TEXT;                   -- YYYY-MM-DD
   `,
+  // 2026-11-14: talking it through (DESIGN.md §5.8): each conversation's link, summary and the
+  // steps it proposed that haven't been kept or dropped yet.
+  `
+  ALTER TABLE items ADD COLUMN research TEXT NOT NULL DEFAULT '[]';  -- JSON [{ id, at, source, url, summary, proposed }]
+  `,
 ];
 
 export type DB = DatabaseSync;
@@ -140,6 +145,7 @@ export function loadState(db: DB): State {
       log: JSON.parse(r.log),
       oneOff: !!r.one_off,
       snoozedUntil: r.snoozed_until,
+      research: JSON.parse(r.research),
     } satisfies Item;
   }
   for (const r of db.prepare("SELECT * FROM dev_notes").all() as Row[]) {
@@ -188,6 +194,7 @@ export const save = {
       log: JSON.stringify(x.log),
       one_off: x.oneOff ? 1 : 0,
       snoozed_until: x.snoozedUntil,
+      research: JSON.stringify(x.research),
     });
   },
   devnotes(db: DB, x: DevNote) {

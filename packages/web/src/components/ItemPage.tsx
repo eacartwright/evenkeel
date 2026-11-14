@@ -5,6 +5,7 @@ import { A, go } from "../router";
 import { useData } from "../sync";
 import { DraftInput, DraftTextarea, Field, NumberInput, Picker, Segmented, TitleInput } from "./controls";
 import { Check, ItemRow, itemPath, LaterButton } from "./ItemRow";
+import { TalkItThrough } from "./Research";
 
 /**
  * One item (DESIGN.md §5.5): a task, a project (it has steps) or a note, and any of them can
@@ -120,6 +121,8 @@ export function ItemPage({ id }: { id: string }) {
         </div>
         <AddStep parentId={id} />
       </section>
+
+      {!item.deleted && <TalkItThrough item={item} />}
 
       <div className="fields">
         <Field label="Kind">

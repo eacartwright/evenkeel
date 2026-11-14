@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, blank, captureLines, cleanLine, countLines, dayLabel, daysBetween, emptyState, fromShared, Invalid, minutesLabel, newRepeat, nextOn, NO_AREA, repeatLabel, repeatState, validators, View, type Item, type Repeat, type State } from "./index";
+import { addDays, blank, captureLines, cleanLine, countLines, dayLabel, daysBetween, emptyState, fromShared, Invalid, minutesLabel, newRepeat, nextOn, NO_AREA, repeatLabel, repeatState, validators, View, researchTag, itemForTag, parseWrapUp, looksLikeWrapUp, researchPrompt, chatUrl, sourceOf, type Item, type Repeat, type State } from "./index";
 
 const NOW = 1_700_000_000_000;
 
@@ -314,15 +314,91 @@ describe("repeat", () => {
     const t = v.today(now);
     expect(t.chores.map((i) => i.id)).toEqual(["due"]);
     expect(t.quickWins.map((i) => i.id)).toEqual(["quick"]);
-    expect(v.doable().map((i) => i.id).sort()).toEqual(["due", "quick"]);
+    expect(v.doable("", now).map((i) => i.id).sort()).toEqual(["due", "quick"]);
   });
 
   it("keeps a chore put off with Later out of Today until its day", () => {
     const due = { id: "due", tier: "chip" as const, repeat: newRepeat("about", 1, "week", now), log: [] };
     const later = new View(state([{ ...due, snoozedUntil: "2026-11-11" }]));
     expect(later.today(now).chores).toEqual([]);
-    expect(later.doable(), "not offered in All either").toEqual([]);
+    expect(later.doable("", now), "not offered in All either").toEqual([]);
     expect(later.today("2026-11-11").chores.map((i) => i.id)).toEqual(["due"]);
     expect(validators.items({ title: "x", snoozedUntil: "2026-11-11" }, "a", NOW).snoozedUntil).toBe("2026-11-11");
+  });
+});
+
+describe("talking it through (§5.8)", () => {
+  const id = "3f9a2c11-aaaa-4bbb-8ccc-000000000001";
+  const s = state([
+    { id, title: "Hair care", body: "Dry by noon. Use Brand X shampoo." },
+    { id: "g1", parentId: id, title: "Shampoo and conditioner" },
+    { id: "g2", parentId: id, title: "Haircut style", status: "done" },
+  ]);
+  const view = new View(s);
+
+  it("tags an item and finds it by the tag", () => {
+    expect(researchTag(id)).toBe("EK-3f9a2c");
+    expect(itemForTag(s, "blah [EK-3F9A2C] blah")?.id).toBe(id);
+    expect(itemForTag(s, "EK-000000")).toBeUndefined();
+  });
+
+  it("builds a prompt with the topic, notes, steps and how to wrap up", () => {
+    const p = researchPrompt(view, s.items[id]!);
+    expect(p).toContain("[EK-3f9a2c]");
+    expect(p).toContain("Dry by noon");
+    expect(p).toContain("- Shampoo and conditioner");
+    expect(p).toContain("- Haircut style (done)");
+    expect(p).toContain("## Steps");
+    expect(p).toContain("under that group's exact name");
+    // With no steps, it asks for the breakdown first.
+    expect(researchPrompt(view, s.items.g1!)).toContain("break this into a few groups");
+    expect(researchPrompt(view, s.items.g1!)).toContain("Topic: Hair care › Shampoo and conditioner");
+    expect(chatUrl("claude", "a b&c")).toBe("https://claude.ai/new?q=a%20b%26c");
+  });
+
+  it("reads a pasted wrap-up: link, summary, proposed steps in groups", () => {
+    const w = parseWrapUp(`[EK-3f9a2c]
+## Summary
+Switch to a sulfate-free shampoo; condition every wash.
+
+## Open questions
+- Is the water hard?
+
+## Steps
+- Shampoo and conditioner
+  - Buy a sulfate-free shampoo
+  - Try a leave-in after the shower
+- Book a cut in March
+
+https://claude.ai/chat/abc-123`);
+    expect(w.url).toBe("https://claude.ai/chat/abc-123");
+    expect(w.source).toBe("claude");
+    expect(w.summary).toContain("sulfate-free");
+    expect(w.summary).toContain("## Open questions");
+    expect(w.summary).not.toContain("EK-");
+    expect(w.summary).not.toContain("Book a cut");
+    expect(w.proposed).toEqual([
+      { title: "Shampoo and conditioner", steps: [{ title: "Buy a sulfate-free shampoo", steps: [] }, { title: "Try a leave-in after the shower", steps: [] }] },
+      { title: "Book a cut in March", steps: [] },
+    ]);
+  });
+
+  it("takes plain text as all summary, and a bare link as just the link", () => {
+    expect(parseWrapUp("Just some notes")).toEqual({ url: "", source: "other", summary: "Just some notes", proposed: [] });
+    expect(parseWrapUp("https://chatgpt.com/c/xyz")).toMatchObject({ url: "https://chatgpt.com/c/xyz", source: "chatgpt", summary: "" });
+    expect(parseWrapUp("**Next steps:**\n1. Call the salon\n**Notes**\nbye").proposed).toEqual([{ title: "Call the salon", steps: [] }]);
+    expect(sourceOf("https://chat.openai.com/c/1")).toBe("chatgpt");
+  });
+
+  it("tells a wrap-up from a capture", () => {
+    expect(looksLikeWrapUp("[EK-3f9a2c]\n## Summary\nx")).toBe(true);
+    expect(looksLikeWrapUp("Buy milk\nCall Mom")).toBe(false);
+    expect(looksLikeWrapUp("## Summary\nno tag")).toBe(false);
+  });
+
+  it("validates research on an item", () => {
+    const v = validators.items({ title: "x", research: [{ id: "r1", at: 5, source: "claude", url: "https://claude.ai/chat/1", summary: "s", proposed: [{ title: "a", steps: [{ title: " ", steps: [] }] }] }] }, "i", NOW);
+    expect(v.research).toEqual([{ id: "r1", at: 5, source: "claude", url: "https://claude.ai/chat/1", summary: "s", proposed: [{ title: "a", steps: [] }] }]);
+    expect(() => validators.items({ title: "x", research: [{ url: "javascript:alert(1)" }] }, "i", NOW)).toThrow(Invalid);
   });
 });

@@ -1,3 +1,4 @@
+import { SOURCES, type Proposed, type Research } from "./research";
 import { ENERGIES, REPEAT_KINDS, REPEAT_UNITS, SETTINGS_ID, STATUSES, TIERS, type Attachment, type DevNote, type Item, type Kind, type LogEntry, type Records, type Repeat, type Settings } from "./types";
 
 // Turns a request body into a clean record, or says what's wrong. The server runs these on
@@ -87,7 +88,38 @@ function item(body: unknown, recId: string, now: number): Item {
     log: log(b.log),
     oneOff: bool(b.oneOff),
     snoozedUntil: date(b.snoozedUntil, "snoozedUntil"),
+    research: research(b.research),
   };
+}
+
+function research(x: unknown): Research[] {
+  if (x === undefined || x === null) return [];
+  if (!Array.isArray(x) || x.length > 100) throw new Invalid("research: expected a list (up to 100)");
+  return x.map((r, i) => {
+    const b = obj(r);
+    const url = str(b.url, `research[${i}].url`, 2000).trim();
+    if (url && !/^https?:\/\//i.test(url)) throw new Invalid(`research[${i}].url: expected a web link`);
+    return {
+      id: id(b.id, `research[${i}].id`) ?? String(i),
+      at: num(b.at, `research[${i}].at`) ?? 0,
+      source: oneOf(b.source, SOURCES, `research[${i}].source`, "other")!,
+      url,
+      summary: str(b.summary, `research[${i}].summary`, 50_000),
+      proposed: proposed(b.proposed, `research[${i}].proposed`, 0),
+    };
+  });
+}
+
+/** Proposed steps: groups of steps, three deep at most, a few hundred in all. */
+function proposed(x: unknown, field: string, depth: number): Proposed[] {
+  if (x === undefined || x === null) return [];
+  if (!Array.isArray(x) || x.length > 200) throw new Invalid(`${field}: expected a list (up to 200)`);
+  return x
+    .map((p) => {
+      const b = obj(p);
+      return { title: str(b.title, `${field}.title`, 500).trim(), steps: depth < 2 ? proposed(b.steps, field, depth + 1) : [] };
+    })
+    .filter((p) => p.title);
 }
 
 function repeat(x: unknown): Repeat | null {

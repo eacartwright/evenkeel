@@ -1,4 +1,6 @@
 // The records Evenkeel stores (DESIGN.md §4). Client and server share these.
+import type { Research } from "./research";
+
 // Every record is saved whole (PUT /api/<kind>/<id>); `updatedAt` and `rev` are set by the server.
 
 export type Id = string;
@@ -69,6 +71,8 @@ export interface Item extends Base {
   oneOff: boolean;
   /** Later: kept off Today (and out of All's picks) until this day, YYYY-MM-DD. */
   snoozedUntil: string | null;
+  /** Conversations about it, each with its wrap-up (DESIGN.md §5.8), oldest first. */
+  research: Research[];
 }
 
 export const REPEAT_KINDS = ["about", "on"] as const;
@@ -155,6 +159,7 @@ export const blank = {
     log: [],
     oneOff: false,
     snoozedUntil: null,
+    research: [],
   }),
   devnote: (id: Id, text: string, path: string, now = Date.now()): DevNote => ({ ...baseOf(id, now), text, path, done: false, files: [] }),
   settings: (now = Date.now()): Settings => ({ ...baseOf(SETTINGS_ID, now), areas: [...DEFAULT_AREAS] }),

@@ -1,14 +1,17 @@
+import { itemForTag, looksLikeWrapUp, parseWrapUp } from "@evenkeel/shared";
 import { useEffect, useRef, useState } from "react";
+import { addResearch } from "./actions";
 import { AllPage } from "./components/AllPage";
 import { CapturePage } from "./components/CapturePage";
 import { DevNotesDialog } from "./components/DevNotes";
 import { InboxPage } from "./components/InboxPage";
 import { ItemPage } from "./components/ItemPage";
+import { itemPath } from "./components/ItemRow";
 import { closeQuickAddFromBack, fromShare, openQuickAdd, QuickAdd, useQuickAdd } from "./components/QuickAdd";
 import { SettingsDialog } from "./components/Settings";
 import { TodayPage } from "./components/TodayPage";
 import { A, go, useRoute } from "./router";
-import { signIn, useData } from "./sync";
+import { data, signIn, useData } from "./sync";
 import { dismissToast, useToast } from "./toast";
 
 const NAV = [
@@ -97,7 +100,16 @@ export function App() {
   // Share to Evenkeel lands on /share?title=…&text=…&url=…: open Quick add with it.
   useEffect(() => {
     if (location.pathname === "/share") {
-      const init = fromShare(new URLSearchParams(location.search));
+      const q = new URLSearchParams(location.search);
+      // A chat's wrap-up (DESIGN.md §5.8) goes straight to the item its tag names.
+      const all = [q.get("title"), q.get("text"), q.get("url")].filter(Boolean).join("\n\n");
+      const to = looksLikeWrapUp(all) ? itemForTag(data().state, all) : undefined;
+      if (to) {
+        addResearch(to.id, parseWrapUp(all));
+        go(itemPath(to.id), { replace: true });
+        return;
+      }
+      const init = fromShare(q);
       go("/", { replace: true });
       openQuickAdd(init);
     }

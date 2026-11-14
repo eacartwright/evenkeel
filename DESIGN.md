@@ -186,7 +186,7 @@ exist, it should pick by those instead of a shuffle.
 Top to bottom, so the things used most need no scrolling (from Evan's dev notes, 2026-11-09):
 title with its box; **Done · Skip · Later · Drop** (Later and "Back now" on repeating items; Open
 again once finished); the **Next step** box (the clarify interview will fill it); **Steps** (add
-with Enter, reorder ↑↓, tick off); Kind (Task/Note), Where (tier), Area, Repeats, Deadline,
+with Enter, reorder ↑↓, tick off); **Talk it through** (§5.8); Kind (Task/Note), Where (tier), Area, Repeats, Deadline,
 Planned for (+ Today), Takes (min), Energy, Waits on (picked with "+ Add"); Notes; Delete at the
 foot. Everything saves as you go (`DraftInput` on Enter or leaving the box, as in foodlab).
 
@@ -274,6 +274,52 @@ the two (a stray "Ch" into Chores). **Delete** takes it off the list and off its
 with no area; Undo puts both back. An item's **Area** field is a picker, as foodlab's "Kind of":
 typing filters, Enter or a tap picks, and a new area is made only by choosing **+ Add the area
 "…"** (which also adds it to the list). Inbox's area menu offers the same list.
+
+### 5.8 Talk it through (built 2026-11-14)
+
+Some items need thinking before they can be broken down: "hair care" is really shampoo and
+conditioner, color, styling products and a haircut style, each with its own research. That
+thinking happens in **Claude or ChatGPT on the subscriptions**, not the API; Evenkeel starts the
+conversation and takes back what came out of it, so nothing ends up scattered across chat
+histories. (Evan, 2026-11-14: start and end may use the API later; the back-and-forth never does.)
+
+**The loop.** Capture (a ramble is fine) → *Talk it through* to break it into groups → keep the
+proposed groups as steps → open one group (or the whole topic) and talk it through again → its
+wrap-up lands on that item → next group whenever.
+
+- **Start.** An item's *Talk it through* has **Claude ↗** and **ChatGPT ↗**: links
+  (`claude.ai/new?q=…`, `chatgpt.com/?q=…`) that open a new chat with the prompt filled in
+  (press Enter). The prompt is copied too, in case an app doesn't fill it in. It carries the
+  item's **tag** (`[EK-3f9a2c]`, the first six of its id), the path (Hair care › Color), the
+  notes, the steps so far (and which are done), the last two summaries, and how to wrap up. With
+  no steps it asks for a breakdown into groups first; with steps, it digs in and puts new steps
+  under the existing group names. Pictures are added in the chat. Two links, not a "Both"
+  button: a browser opens only one new tab per click.
+- **Wrap up.** Saying "wrap up" gets `[tag]`, `## Summary`, `## Open questions`, `## Steps`
+  (indented, as in Capture). Paste it (and the chat's link, if handy) into the item's box; or into
+  **Capture**, which sees the tag and offers "Add it there"; or **Share** it to Evenkeel from the
+  phone, which goes straight to the tagged item.
+- **What's kept** (`items.research`, migration 4): per conversation, where (Claude, ChatGPT,
+  Chat), the link (added later if it wasn't pasted), the summary, and the **proposed steps**
+  not yet kept or dropped. Newest first; the newest summary open. Search in All looks in
+  summaries.
+- **Proposed steps** (Evan's choice, 2026-11-14): all ticked; untick a group and its steps go with
+  it; **Add N steps** or **Drop them**, with Undo. A proposed group with the name of an existing
+  step merges into it, and steps already there aren't added twice, so research from the parent
+  topic lands in its groups.
+
+**Next, once it's been used** (desktop and phone are about 50/50):
+
+1. **An Evenkeel connector (MCP)** in Claude: "this is for EK-3f9a2c, save it", and Claude writes
+   the wrap-up itself: no copy and paste, works in the phone app, no API cost. It could read the
+   item at the start too. Needs a way past Cloudflare Access with its own token; the chat's link
+   still comes from Share.
+2. **A "Send to Evenkeel" bookmarklet** (desktop browser): the chat's link and text, handed to an
+   Evenkeel window it opens (Access needs the login, so not a direct POST). A cheap model then
+   writes the summary, and when a topic has both a Claude and a ChatGPT chat, where they agree and
+   differ.
+3. **Dictation** as sideshow has it (`dictation.ts`: record, the server transcribes with OpenAI),
+   with foodlab's `ai.ts`, for the ramble (§5.6). Windows' Win+H works in the boxes meanwhile.
 
 ## 6. Chores and reminders (phase 2, planned)
 

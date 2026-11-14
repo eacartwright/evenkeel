@@ -193,12 +193,12 @@ export class View {
 
   /**
    * Everything filed, for All (DESIGN.md §5.4): top-level items grouped by tier, notes on their
-   * own. Finished tasks only with `withDone`. A query matches title, next action, body and area;
+   * own. Finished tasks only with `withDone`. A query matches title, next action, body, area and research summaries;
    * a step that matches brings its top-level item.
    */
   all({ q = "", area = "", withDone = false }: { q?: string; area?: string; withDone?: boolean } = {}): { tier: Tier | "notes"; items: Item[] }[] {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-    const text = (i: Item) => `${i.title}\n${i.nextAction}\n${i.body}\n${i.area}`.toLowerCase();
+    const text = (i: Item) => `${i.title}\n${i.nextAction}\n${i.body}\n${i.area}\n${(i.research ?? []).map((r) => r.summary).join("\n")}`.toLowerCase();
     const matches = (i: Item): boolean => terms.every((t) => text(i).includes(t)) || this.children(i.id).some(matches);
     const top = this.children_(null).filter(
       (i) =>
@@ -248,12 +248,12 @@ export class View {
    * project offers its first open step rather than the whole of itself; the back burner and notes
    * aren't offered.
    */
-  doable(area = ""): Item[] {
+  doable(area = "", day = today()): Item[] {
     const next = (i: Item): Item | null => {
       if (!isOpen(i) || this.blocked(i)) return null;
       // A repeating thing is offered only once it's due again.
-      if (i.repeat && !repeatState(i)!.due) return null;
-      if (snoozed(i)) return null;
+      if (i.repeat && !repeatState(i, day)!.due) return null;
+      if (snoozed(i, day)) return null;
       const steps = this.children(i.id).filter(isOpen);
       if (!steps.length) return i;
       for (const s of steps) {

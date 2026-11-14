@@ -1,10 +1,10 @@
-import { captureLines, countLines } from "@evenkeel/shared";
+import { captureLines, countLines, itemForTag, looksLikeWrapUp, parseWrapUp } from "@evenkeel/shared";
 import { useEffect, useRef, useState } from "react";
-import { capture } from "../actions";
-import { A } from "../router";
+import { addResearch, capture } from "../actions";
+import { A, go } from "../router";
 import { useData } from "../sync";
 import { showToast } from "../toast";
-import { ItemRow } from "./ItemRow";
+import { ItemRow, itemPath } from "./ItemRow";
 import { TodayLists } from "./TodayPage";
 
 const DRAFT_KEY = "evenkeel:capture";
@@ -15,7 +15,7 @@ const DRAFT_KEY = "evenkeel:capture";
  * in the inbox, then today.
  */
 export function CapturePage() {
-  const { view } = useData();
+  const { view, state } = useData();
   const [text, setText] = useState(() => {
     try {
       return localStorage.getItem(DRAFT_KEY) ?? "";
@@ -54,6 +54,15 @@ export function CapturePage() {
     box.current?.focus();
   };
 
+  // A chat's wrap-up pasted here (DESIGN.md §5.8) goes to the item its tag names, not the inbox.
+  const wrapFor = looksLikeWrapUp(text) ? itemForTag(state, text) : undefined;
+  const attach = () => {
+    if (!wrapFor) return;
+    addResearch(wrapFor.id, parseWrapUp(text));
+    setText("");
+    go(itemPath(wrapFor.id));
+  };
+
   const inbox = view.inbox();
   return (
     <div className="page capture-page">
@@ -68,7 +77,8 @@ export function CapturePage() {
         onKeyDown={(e) => {
           if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
-            add();
+            if (wrapFor) attach();
+            else add();
           } else if (e.key === "Tab" && !e.shiftKey && !e.altKey && !e.ctrlKey) {
             // Tab indents (a step), rather than leaving the box.
             e.preventDefault();
@@ -80,13 +90,23 @@ export function CapturePage() {
           }
         }}
       />
+      {wrapFor && (
+        <div className="wrap-for">
+          <span>
+            This is a chat's wrap-up for <b>{wrapFor.title}</b>.
+          </span>
+          <button className="btn primary" onClick={attach}>
+            Add it there
+          </button>
+        </div>
+      )}
       <div className="capture-bar">
         <span className="muted small">
           {count ? `${lines.length} ${lines.length === 1 ? "thing" : "things"}${steps ? `, ${steps} ${steps === 1 ? "step" : "steps"}` : ""}` : ""}
         </span>
         <span className="spacer" />
         <span className="muted small hide-sm">Ctrl+Enter</span>
-        <button className="btn primary" disabled={!count} onClick={add}>
+        <button className={`btn ${wrapFor ? "" : "primary"}`} disabled={!count} onClick={add}>
           Add to inbox
         </button>
       </div>

@@ -2159,3 +2159,107 @@ ul.notes li.done .note-text {
     padding: 4px 8px;
   }
 }
+/* Talk it through (DESIGN.md §5.8): open a chat, keep its wrap-up. */
+.talk-how {
+  margin: 0 0 10px;
+}
+.talk-open {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.talk-entry {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.talk-entry-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.talk-source {
+  font-weight: 600;
+}
+.talk-link {
+  flex: 1 1 14em;
+  min-width: 0;
+}
+.talk-summary {
+  margin-top: 6px;
+}
+.talk-summary > summary {
+  cursor: pointer;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.talk-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 6px;
+  line-height: 1.45;
+}
+.talk-proposed {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.proposed-list,
+.proposed-list ul {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding-left: 0;
+}
+.proposed-list ul {
+  padding-left: 24px;
+  margin: 0;
+}
+.proposed {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 6px 0;
+  cursor: pointer;
+}
+.proposed input {
+  margin-top: 3px;
+}
+.proposed.off span {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.talk-paste-box {
+  width: 100%;
+  min-height: 70px;
+  resize: vertical;
+}
+.talk-paste .inline {
+  margin-top: 6px;
+}
+/* A wrap-up pasted into Capture: offered to the item it's tagged for. */
+.wrap-for {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+}
+.wrap-for span {
+  flex: 1 1 16em;
+}
+.talk-block + .talk-block {
+  margin-top: 10px;
+}
+.talk-h {
+  font-weight: 600;
+  white-space: normal;
+}

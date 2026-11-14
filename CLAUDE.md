@@ -28,7 +28,8 @@ Data is `data/evenkeel.db` (SQLite, git-ignored, per machine). Test against a sc
   server on every save), `capture.ts` (`captureLines`: lines → items, indent = step;
   `fromShared`), `derive.ts` (`View`: children / ancestors / `wouldLoop`, `progress`, `inbox`,
   `today`, `all`, `areas`, `blocked`), `repeat.ts` (repeating items: `repeatState`, `nextOn`,
-  `repeatLabel`, `logged`, `newRepeat`; DESIGN.md §6.1). Pure; tests in `shared.test.ts`.
+  `repeatLabel`, `logged`, `newRepeat`; DESIGN.md §6.1), `research.ts` (talk it through: `researchPrompt`,
+  `chatUrl`, `researchTag` / `itemForTag`, `parseWrapUp`; DESIGN.md §5.8). Pure; tests in `shared.test.ts`.
 - `packages/server` — Node + Hono + `node:sqlite` (Node ≥ 22.13). `db.ts`: tables `items`,
   `dev_notes`, `settings` (one row, `app`), `meta.rev`; `loadState` / `save.<kind>`. `store.ts`:
   the state in memory; `put(kind, id, body)` validates, checks parents (exist, no loops) and
@@ -39,7 +40,7 @@ Data is `data/evenkeel.db` (SQLite, git-ignored, per machine). Test against a sc
 - `packages/web` — React + Vite PWA, share target `/share`. `sync.ts` is foodlab's (localStorage
   state + outbox of whole records). `actions.ts`: every change builds on the **latest** record
   (`data().state`), never the one from the last render. `components/`: `CapturePage`,
-  `InboxPage`, `TodayPage`, `AllPage`, `ItemPage`, `ItemRow` (`Check`, `Facts`), `QuickAdd`,
+  `InboxPage`, `TodayPage`, `AllPage`, `ItemPage`, `Research` (Talk it through), `ItemRow` (`Check`, `Facts`), `QuickAdd`,
   `Settings` (sections: General, Areas, Experimental), `DevNotes` (foodlab's: edit, files, page
   link, Copy), `controls.tsx` (foodlab's `DraftInput`, `TitleInput`, `NumberInput`,
   `DraftTextarea`, `Segmented`, `Field`). `uploads.ts`, `fonts.ts` + `fonts-sans.ts` (the
@@ -109,5 +110,11 @@ and a database never runs the same migration twice). An extra migration costs no
   an item's page has Done · Skip · Later · Drop under the title and Steps above the fields;
   "1/3 steps" in any list opens the steps under the row. Planned in DESIGN.md: our own calendar
   view (§7) and habits (§6.3, to talk through first). 38 tests; headless check on a scratch DB.
+- 2026-11-14: **Talk it through built** (DESIGN.md §5.8): Claude ↗ / ChatGPT ↗ open a new chat
+  with the item filled in (tag, path, notes, steps, how to wrap up); the wrap-up pasted back (on
+  the item, into Capture, or shared) keeps the link, summary and proposed steps (kept into
+  matching groups). Migration 4: `items.research`. `View.doable` takes the day (two tests had
+  gone stale). 44 tests; headless walkthrough on a scratch DB. Next for it: MCP connector,
+  capture bookmarklet + API summary, dictation from sideshow.
 - **Next:** settle the views from use; run it on NOSTROMO; then ramble capture and the clarify interview (DESIGN.md §5.6),
   reusing foodlab's `ai.ts`.

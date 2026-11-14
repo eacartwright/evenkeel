@@ -12,10 +12,13 @@ import {
   type DevNote,
   type Id,
   type Item,
+  type Proposed,
+  type Research,
   type Repeat,
   type Settings,
   type Status,
   type Tier,
+  type WrapUp,
 } from "@evenkeel/shared";
 import { data, put } from "./sync";
 import { showToast } from "./toast";
@@ -239,4 +242,64 @@ export function editDevNote(n: DevNote, text: string) {
 export function removeDevNote(n: DevNote) {
   put("devnotes", { ...(data().state.devnotes[n.id] ?? n), deleted: true });
   showToast("Deleted the note", { label: "Undo", run: () => put("devnotes", { ...(data().state.devnotes[n.id] ?? n), deleted: false }) });
+}
+
+// ---- talking it through (DESIGN.md §5.8) ----
+
+const researchOf = (i: Item): Research[] => i.research ?? [];
+
+/** A pasted wrap-up kept on an item: its link, summary and proposed steps. */
+export function addResearch(id: Id, w: WrapUp) {
+  const i = latest(id);
+  if (!i) return;
+  const r: Research = { id: newId(), at: Date.now(), ...w };
+  update(id, { research: [...researchOf(i), r] });
+  return r;
+}
+
+/** Change one conversation (its link, say). */
+export function updateResearch(id: Id, rid: Id, change: Partial<Research>) {
+  const i = latest(id);
+  if (i) update(id, { research: researchOf(i).map((r) => (r.id === rid ? { ...r, ...change } : r)) });
+}
+
+export function removeResearch(id: Id, rid: Id) {
+  const i = latest(id);
+  if (!i) return;
+  const before = researchOf(i);
+  update(id, { research: before.filter((r) => r.id !== rid) });
+  showToast("Removed the conversation", { label: "Undo", run: () => update(id, { research: before }) });
+}
+
+const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * Proposed steps kept: each becomes a step of `parentId`, unless one by that name is already
+ * there, in which case its own steps go under that one (research from the parent topic lands
+ * in its groups). Returns the new items.
+ */
+function addProposed(parentId: Id, list: Proposed[]): Item[] {
+  const made: Item[] = [];
+  for (const p of list) {
+    const there = data().view.children(parentId).find((c) => !c.deleted && same(c.title, p.title));
+    const at = there ?? createItem(p.title, { parentId });
+    if (!there) made.push(at);
+    made.push(...addProposed(at.id, p.steps));
+  }
+  return made;
+}
+
+/** Keep the ticked proposed steps (`keep`, already filtered), drop the rest; Undo puts both back. */
+export function keepProposed(id: Id, rid: Id, keep: Proposed[]) {
+  const i = latest(id);
+  const r = i && researchOf(i).find((x) => x.id === rid);
+  if (!i || !r) return;
+  const made = addProposed(id, keep);
+  updateResearch(id, rid, { proposed: [] });
+  const undo = () => {
+    for (const m of made) update(m.id, { deleted: true });
+    updateResearch(id, rid, { proposed: r.proposed });
+  };
+  if (made.length) showToast(`Added ${made.length} ${made.length === 1 ? "step" : "steps"}`, { label: "Undo", run: undo });
+  else showToast(keep.length ? "Those steps were already there" : "Dropped the proposed steps", { label: "Undo", run: undo });
 }
