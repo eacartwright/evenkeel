@@ -11,8 +11,8 @@ const DRAFT_KEY = "evenkeel:capture";
 
 /**
  * The landing page (DESIGN.md §5.1): one box, one line per thing, straight into the inbox.
- * Nothing to choose; filing comes later. The draft survives closing the app. Below: the newest
- * in the inbox, then today.
+ * Nothing to choose; filing comes later. The draft survives closing the app. Below: today, then
+ * the newest in the inbox.
  */
 export function CapturePage() {
   const { view, state } = useData();
@@ -111,6 +111,16 @@ export function CapturePage() {
         </button>
       </div>
 
+      <section className="section capture-today">
+        <div className="section-head">
+          <h2>Today</h2>
+          <A href="/today" className="btn subtle">
+            Open Today →
+          </A>
+        </div>
+        <TodayLists brief />
+      </section>
+
       {inbox.length > 0 && (
         <section className="section">
           <div className="section-head">
@@ -127,16 +137,6 @@ export function CapturePage() {
           {inbox.length > 5 && <p className="muted small">and {inbox.length - 5} more</p>}
         </section>
       )}
-
-      <section className="section capture-today">
-        <div className="section-head">
-          <h2>Today</h2>
-          <A href="/today" className="btn subtle">
-            Open Today →
-          </A>
-        </div>
-        <TodayLists brief />
-      </section>
     </div>
   );
 }

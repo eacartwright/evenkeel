@@ -135,8 +135,8 @@ One box, one thing per line, straight into the inbox. List markers and checkboxe
 (`- [ ]`, `*`, `1.`; `[x]` makes it done); an **indented line becomes a step** of the line above,
 so a pasted Todoist or Obsidian list keeps its shape. Tab indents. Ctrl+Enter adds. Lines over
 200 characters get a cut title with the whole text in the body. The draft survives closing the
-app. Under the box: the newest five in the inbox, then **Today** (§5.3's groups, "Open Today →"),
-so the landing page is also where the day starts (from Evan's dev notes, 2026-11-09). **Quick add** (+, Alt+N) adds one thing; "Today" also plans it for today. **Share to
+app. Under the box: **Today** (§5.3's groups, "Open Today →"), then the newest five in the inbox,
+so the landing page is also where the day starts (from Evan's dev notes, 2026-11-09; Today above the inbox since 2026-11-15). **Quick add** (+, Alt+N) adds one thing; "Today" also plans it for today. **Share to
 Evenkeel** from Android opens Quick add with the shared title and the link in the notes.
 
 ### 5.2 Inbox (`/inbox`)
