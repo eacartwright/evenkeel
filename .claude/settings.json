@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh ripley-deploy evenkeel)",
+      "Bash(ssh ripley-deploy evenkeel *)"
+    ]
+  }
+}
