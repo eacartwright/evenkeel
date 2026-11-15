@@ -72,6 +72,9 @@ and a database never runs the same migration twice). An extra migration costs no
   and 5175 the way 8787 / 8788 were; don't just pick another port.
 - Android install needs the manifest and icons reachable without the Access login (runbook),
   or there's no share target.
+- `npm test` fails with "Cannot read properties of undefined (reading 'config')" when the shell's
+  directory is `c:\...` (lower-case drive): vitest loads twice. Run it from `C:\Dev\evenkeel`
+  (e.g. PowerShell `Set-Location C:\Dev\evenkeel`).
 - `crypto.randomUUID` needs a secure context; use `newId()` from shared.
 
 ## Working with Evan
@@ -121,5 +124,9 @@ and a database never runs the same migration twice). An extra migration costs no
   matching groups). Migration 4: `items.research`. `View.doable` takes the day (two tests had
   gone stale). 44 tests; headless walkthrough on a scratch DB. Next for it: MCP connector,
   capture bookmarklet + API summary, dictation from sideshow.
+- 2026-11-15: **Repeating fix** (DESIGN.md §6.1): a scheduled chore finished late counts for
+  the week it was started (a step done before the latest due day), so this week's is still due;
+  log entries keep `for`. **Done when all its steps are**, per item. Migration 5:
+  `items.done_with_steps`. 45 tests; headless check on a scratch DB.
 - **Next:** settle the views from use; run it on NOSTROMO; then ramble capture and the clarify interview (DESIGN.md §5.6),
   reusing foodlab's `ai.ts`.

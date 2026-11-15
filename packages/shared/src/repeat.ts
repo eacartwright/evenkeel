@@ -5,6 +5,8 @@ import { addDays, dayLabel, daysBetween, today, type Item, type LogEntry, type R
 //   of the interval has passed, then due; never "overdue", just staler.
 // - "on": a calendar schedule from `start` (every Friday, the 1st of every month). Done counts for
 //   the latest due day; the next one is the first after today, so missed ones don't pile up.
+//   Except when it was already under way: started (a step done) before the latest due day, it
+//   counts for the due day it was started for, and the latest is still to do.
 
 const UNIT_DAYS: Record<RepeatUnit, number> = { day: 1, week: 7, month: 30 };
 const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -22,6 +24,12 @@ export const intervalDays = (r: Pick<Repeat, "every" | "unit">) => r.every * UNI
 
 /** The last day it was done or skipped, or null if never (or not known). */
 export const lastDone = (i: Pick<Item, "log">): string | null => i.log.at(-1)?.day ?? null;
+
+/** The due day the latest entry counts for ("on"): its `for`, or the day it was done. */
+export const lastFor = (i: Pick<Item, "log">): string | null => {
+  const e = i.log.at(-1);
+  return e ? (e.for ?? e.day) : null;
+};
 
 /** Does an "on" schedule fall on this day? */
 export function occurs(r: Repeat, day: string): boolean {
@@ -44,6 +52,28 @@ export function nextOn(r: Repeat, after: string | null): string | null {
   let day = after && after >= r.start ? addDays(after, 1) : r.start;
   for (let n = 0; n < 4000; n++, day = addDays(day, 1)) if (occurs(r, day)) return day;
   return null;
+}
+
+/** The last day an "on" schedule falls on in `from`..`to`, or null. */
+function lastOccurrence(r: Repeat, from: string, to: string): string | null {
+  for (let day = to; day >= from; day = addDays(day, -1)) if (occurs(r, day)) return day;
+  return null;
+}
+
+/**
+ * The due day being done (or skipped) today counts for, on an "on" schedule; null when that's just
+ * today's date (nothing due yet, or not "on"). The latest due day, unless it was started (`started`,
+ * the day its first step was done) before then: then the due day it was started for, never
+ * earlier than the first one not yet done.
+ */
+export function countsFor(i: Pick<Item, "repeat" | "log">, started: string | null, now = today()): string | null {
+  const r = i.repeat;
+  if (r?.kind !== "on") return null;
+  const owed = nextOn(r, lastFor(i));
+  if (!owed || owed > now) return null;
+  const latest = lastOccurrence(r, owed, now) ?? owed;
+  const day = started && started < latest ? (lastOccurrence(r, owed, started) ?? owed) : latest;
+  return day === now ? null : day;
 }
 
 export interface RepeatState {
@@ -71,7 +101,7 @@ export function repeatState(i: Pick<Item, "repeat" | "log">, now = today()): Rep
     const ago = days === 0 ? "done today" : `${days} day${days === 1 ? "" : "s"}`;
     return { due: ratio >= 1, soon: ratio >= 0.8, ratio, next: null, label: `${ago} (usually ${intervalDays(r)})` };
   }
-  const next = nextOn(r, last);
+  const next = nextOn(r, lastFor(i));
   if (!next) return { due: false, soon: false, ratio: null, next: null, label: "no more days" };
   const due = next <= now;
   const label = next === now ? "due today" : due ? `since ${dayLabel(next, now)}` : `next ${dayLabel(next, now)}`;
@@ -94,9 +124,10 @@ export function repeatLabel(r: Repeat): string {
   return r.every === 1 ? `Every month on the ${day}` : `Every ${unit} on the ${day}`;
 }
 
-/** The item's log with `did` added for `day` (kept in order, the last 100). */
-export function logged(i: Item, did: LogEntry["did"], day = today()): LogEntry[] {
-  return [...i.log, { day, did }].sort((a, b) => a.day.localeCompare(b.day)).slice(-100);
+/** The item's log with `did` added for `day` (kept in order, the last 100); `forDay`: see countsFor. */
+export function logged(i: Item, did: LogEntry["did"], day = today(), forDay: string | null = null): LogEntry[] {
+  const e: LogEntry = forDay && forDay !== day ? { day, did, for: forDay } : { day, did };
+  return [...i.log, e].sort((a, b) => a.day.localeCompare(b.day)).slice(-100);
 }
 
 /** A new repeat rule with sensible defaults for its kind and unit. */

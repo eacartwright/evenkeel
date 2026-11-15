@@ -87,6 +87,7 @@ function item(body: unknown, recId: string, now: number): Item {
     repeat: repeat(b.repeat),
     log: log(b.log),
     oneOff: bool(b.oneOff),
+    doneWithSteps: bool(b.doneWithSteps),
     snoozedUntil: date(b.snoozedUntil, "snoozedUntil"),
     research: research(b.research),
   };
@@ -145,9 +146,12 @@ function log(x: unknown): LogEntry[] {
   if (x === undefined || x === null) return [];
   if (!Array.isArray(x)) throw new Invalid("log: expected a list");
   return x
-    .map((e) => {
-      const b = obj(e);
-      return { day: date(b.day, "log.day")!, did: oneOf(b.did, ["done", "skipped"] as const, "log.did", "done")! };
+    .map((entry) => {
+      const b = obj(entry);
+      const e: LogEntry = { day: date(b.day, "log.day")!, did: oneOf(b.did, ["done", "skipped"] as const, "log.did", "done")! };
+      const f = date(b.for, "log.for");
+      if (f && f !== e.day) e.for = f;
+      return e;
     })
     .filter((e) => e.day)
     .sort((a, b) => a.day.localeCompare(b.day))

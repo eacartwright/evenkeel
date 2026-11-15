@@ -120,6 +120,12 @@ export function ItemPage({ id }: { id: string }) {
           ))}
         </div>
         <AddStep parentId={id} />
+        {isTask && steps.length > 0 && (
+          <label className="inline small muted">
+            <input type="checkbox" checked={item.doneWithSteps} onChange={(e) => set({ doneWithSteps: e.target.checked })} />
+            Done when all its steps are
+          </label>
+        )}
       </section>
 
       {!item.deleted && <TalkItThrough item={item} />}
@@ -319,6 +325,7 @@ function RepeatInput({ item }: { item: Item }) {
             {repeatLabel(r)}
             {state && ` · ${state.label}`}
             {r.kind === "about" && !lastDone(item) && " (so it's due now)"}
+            {item.log.at(-1)?.for && ` · last one counted for ${dayLabel(item.log.at(-1)!.for!)}`}
           </span>
         </>
       )}

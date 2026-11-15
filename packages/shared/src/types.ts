@@ -69,6 +69,8 @@ export interface Item extends Base {
   log: LogEntry[];
   /** Said "doesn't repeat" to the Chores area's "How often?". */
   oneOff: boolean;
+  /** Done when all its steps are: ticking the last step finishes it too. */
+  doneWithSteps: boolean;
   /** Later: kept off Today (and out of All's picks) until this day, YYYY-MM-DD. */
   snoozedUntil: string | null;
   /** Conversations about it, each with its wrap-up (DESIGN.md §5.8), oldest first. */
@@ -95,8 +97,12 @@ export interface Repeat {
 }
 
 export interface LogEntry {
+  /** The day it was done or skipped. */
   day: string;
   did: "done" | "skipped";
+  /** "On a schedule": the due day it counts for, when not `day` (laundry started last Sunday and
+   * finished today counts for last Sunday, so today's is still to do). */
+  for?: string;
 }
 
 /** A file attached to a dev note: a screenshot or anything else (as in foodlab). */
@@ -158,6 +164,7 @@ export const blank = {
     repeat: null,
     log: [],
     oneOff: false,
+    doneWithSteps: false,
     snoozedUntil: null,
     research: [],
   }),

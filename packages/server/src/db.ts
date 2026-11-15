@@ -73,6 +73,11 @@ const MIGRATIONS: string[] = [
   `
   ALTER TABLE items ADD COLUMN research TEXT NOT NULL DEFAULT '[]';  -- JSON [{ id, at, source, url, summary, proposed }]
   `,
+  // 2026-11-15: done when all its steps are (DESIGN.md §6.1). (A log entry's "for" day is in the
+  // log's JSON, no column.)
+  `
+  ALTER TABLE items ADD COLUMN done_with_steps INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 export type DB = DatabaseSync;
@@ -144,6 +149,7 @@ export function loadState(db: DB): State {
       repeat: r.repeat ? JSON.parse(r.repeat) : null,
       log: JSON.parse(r.log),
       oneOff: !!r.one_off,
+      doneWithSteps: !!r.done_with_steps,
       snoozedUntil: r.snoozed_until,
       research: JSON.parse(r.research),
     } satisfies Item;
@@ -193,6 +199,7 @@ export const save = {
       repeat: x.repeat ? JSON.stringify(x.repeat) : null,
       log: JSON.stringify(x.log),
       one_off: x.oneOff ? 1 : 0,
+      done_with_steps: x.doneWithSteps ? 1 : 0,
       snoozed_until: x.snoozedUntil,
       research: JSON.stringify(x.research),
     });

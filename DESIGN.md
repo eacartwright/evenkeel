@@ -83,8 +83,9 @@ Everything is an **item**. A task is an item with a status; a project is an item
 | `blockedBy` | Items it waits on |
 | `doneAt` | When it was finished, skipped or dropped |
 | `repeat` | How it comes back, or null (§6.1): `{ kind: about · on, every, unit: day · week · month, days, start }` |
-| `log` | A repeating item's done and skipped days, `[{ day, did }]`, the last 100 |
+| `log` | A repeating item's done and skipped days, `[{ day, did, for? }]`, the last 100; `for`: the due day it counted for, when not `day` (§6.1) |
 | `oneOff` | Answered "Doesn't repeat" to the Chores area's "How often?" |
+| `doneWithSteps` | Done when all its steps are: ticking the last one finishes it too (§6.1) |
 | `snoozedUntil` | Later: off Today and out of All's picks until this day (§6.1) |
 
 Skip is "didn't do it this time, and that's fine" (for chores, phase 2); Drop is "not doing it".
@@ -338,12 +339,21 @@ Any task can repeat (`repeat` on the item, §4.1), in one of two ways, set on it
   laundry), or every N months on a day (31 = the last day). Counted from **Starting**, which also
   fixes which weeks or months count. Done counts for the latest due day; the next is the first
   after today, so missed ones don't pile up ("since Tue", then "next Fri").
+  - **Unless it was under way** (2026-11-15, from Evan's laundry: wash and dry ticked last
+    Sunday, fold today). If a step was done before the latest due day, Done counts for the due
+    day it was started for (never earlier than the one still owed), and the latest is still to
+    do: "Done for Nov 8: Laundry · today's still to do". Nothing started earlier: the latest, as
+    before. The log entry keeps the day it counted for (`for`); Last done set by hand drops it.
+    "About every…" is unchanged: the clock starts when it's finished.
 - **No preferred day by default**: weekends stay free unless I choose otherwise. A day for
   something is just a schedule ("every Friday").
 - **Done** (the checkbox) logs today and the item stays open for next time. **Skip this time**
   starts the clock again without counting as done. **Drop** stops it repeating. Undo puts it
   back. A repeating item's done steps open again when it's done, so a routine (a "Sunday reset")
   can be one item with a checklist.
+- **Done when all its steps are** (any item with steps, a checkbox under them; off by default):
+  ticking the last open step finishes the item too, with one Undo for both. Not always wanted,
+  so it's per item.
 - **Later** (snooze): Tomorrow, In 3 days or Next week. Off Today and out of All's picks until
   then, without counting as done or skipped (the clock keeps running); "later: back Wed" on its
   row; **Back now** on its page undoes it. Done or Skip clears it.

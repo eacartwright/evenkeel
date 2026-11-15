@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, blank, captureLines, cleanLine, countLines, dayLabel, daysBetween, emptyState, fromShared, Invalid, minutesLabel, newRepeat, nextOn, NO_AREA, repeatLabel, repeatState, validators, View, researchTag, itemForTag, parseWrapUp, looksLikeWrapUp, researchPrompt, chatUrl, sourceOf, type Item, type Repeat, type State } from "./index";
+import { addDays, blank, captureLines, cleanLine, countLines, dayLabel, daysBetween, emptyState, fromShared, Invalid, minutesLabel, newRepeat, nextOn, countsFor, lastFor, NO_AREA, repeatLabel, repeatState, validators, View, researchTag, itemForTag, parseWrapUp, looksLikeWrapUp, researchPrompt, chatUrl, sourceOf, type Item, type Repeat, type State } from "./index";
 
 const NOW = 1_700_000_000_000;
 
@@ -282,6 +282,32 @@ describe("repeat", () => {
     expect(nextOn(on({ unit: "month", days: [31] }), null)).toBe("2026-11-30");
     expect(nextOn(on({ unit: "month", days: [1], start: now }), null)).toBe("2026-12-01");
     expect(nextOn(on({ unit: "month", every: 3, days: [15], start: "2026-11-15" }), "2026-11-15")).toBe("2027-02-15");
+  });
+
+  it("counts a chore finished late for the week it was started (Evan's laundry, 2026-11-15)", () => {
+    const sun = on({ days: [0] });
+    const today = "2026-11-15";
+    const item = { repeat: sun, log: [{ day: "2026-11-01", did: "done" as const }] };
+    // Wash and dry ticked last Sunday, fold today: it was last Sunday's; today's is still to do.
+    const forDay = countsFor(item, "2026-11-08", today);
+    expect(forDay).toBe("2026-11-08");
+    const after = { ...item, log: [...item.log, { day: today, did: "done" as const, for: forDay! }] };
+    expect(lastFor(after)).toBe("2026-11-08");
+    expect(repeatState(after, today)).toMatchObject({ due: true, next: today, label: "due today" });
+    // Nothing started before today: it's today's (the missed one doesn't come back).
+    expect(countsFor(item, null, today)).toBeNull();
+    expect(countsFor(item, today, today)).toBeNull();
+    // Started on Saturday: the Sunday owed then (last one), or, if that was done, today's.
+    expect(countsFor({ repeat: sun, log: [] }, "2026-11-14", today)).toBe("2026-11-08");
+    expect(countsFor({ repeat: sun, log: [{ day: "2026-11-08", did: "done" }] }, "2026-11-14", today)).toBeNull();
+    // Started weeks ago and missed since: the week it was started, so only one more is owed.
+    expect(countsFor({ repeat: sun, log: [] }, "2026-11-03", today)).toBe("2026-11-01");
+    // Not due yet, or not on a schedule: just today.
+    expect(countsFor({ repeat: sun, log: [{ day: today, did: "done" }] }, "2026-11-10", today)).toBeNull();
+    expect(countsFor({ repeat: newRepeat("about", 1, "week", today), log: [] }, "2026-11-08", today)).toBeNull();
+    // The log keeps "for" only when it's another day.
+    const v = validators.items({ title: "Laundry", log: [{ day: today, did: "done", for: "2026-11-08" }, { day: "2026-11-01", for: "2026-11-01" }] }, "a", NOW);
+    expect(v.log).toEqual([{ day: "2026-11-01", did: "done" }, { day: today, did: "done", for: "2026-11-08" }]);
   });
 
   it("says the rule plainly", () => {

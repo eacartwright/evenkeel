@@ -1,5 +1,6 @@
 import {
   blank,
+  countsFor,
   dayLabel,
   logged,
   newId,
@@ -55,36 +56,59 @@ export function capture(lines: CapturedLine[], parentId: Id | null = null): numb
   return n;
 }
 
-/** Done, skipped or dropped, with Undo; or open again. */
-export function setStatus(id: Id, status: Status) {
+/** Done, skipped or dropped, with Undo; or open again. `undoToo`: also undone by this one's Undo. */
+export function setStatus(id: Id, status: Status, undoToo?: () => void) {
   const before = latest(id);
   if (!before) return;
-  if (before.repeat && before.status === "open" && (status === "done" || status === "skipped")) return didRepeat(before, status);
+  if (before.repeat && before.status === "open" && (status === "done" || status === "skipped")) return didRepeat(before, status, undoToo);
   put("items", { ...before, status, doneAt: status === "open" ? null : Date.now() });
-  if (status !== "open") {
-    const word = status === "done" ? "Done" : status === "skipped" ? "Skipped" : "Dropped";
-    showToast(`${word}: ${before.title}`, { label: "Undo", run: () => update(id, { status: before.status, doneAt: before.doneAt }) });
-  }
+  if (status === "open") return;
+  const undo = () => {
+    update(id, { status: before.status, doneAt: before.doneAt });
+    undoToo?.();
+  };
+  if (status !== "dropped" && finishParent(before, undo)) return;
+  const word = status === "done" ? "Done" : status === "skipped" ? "Skipped" : "Dropped";
+  showToast(`${word}: ${before.title}`, { label: "Undo", run: undo });
+}
+
+/**
+ * The last open step done, under an item that's "done when its steps are" (DESIGN.md §6.1): the
+ * item is done too, and its Undo undoes the step as well. False if it isn't.
+ */
+function finishParent(step: Item, undoStep: () => void): boolean {
+  const parent = latest(step.parentId ?? "");
+  if (!parent || parent.deleted || !parent.doneWithSteps || parent.status !== "open") return false;
+  const { done, total } = data().view.progress(parent.id);
+  if (total === 0 || done < total) return false;
+  // The parent's Undo puts its steps back first (a routine reopens them), then the step.
+  setStatus(parent.id, "done", undoStep);
+  return true;
 }
 
 /**
  * Done or skipped, on a repeating item (DESIGN.md §6.1): logged, and it stays open for next time.
  * Its finished steps open again, so a routine's checklist starts fresh. Undo puts it all back.
  */
-function didRepeat(before: Item, did: "done" | "skipped") {
+function didRepeat(before: Item, did: "done" | "skipped", undoToo?: () => void) {
   const steps = data().view.descendants(before.id).filter((s) => s.status === "done" || s.status === "skipped");
-  const after: Item = { ...before, log: logged(before, did), doneAt: Date.now(), snoozedUntil: null };
+  // Started before today's due day (a step done then)? It counts for the due day it was started for.
+  const first = Math.min(...steps.map((s) => s.doneAt ?? Infinity));
+  const forDay = countsFor(before, Number.isFinite(first) ? today(new Date(first)) : null);
+  const after: Item = { ...before, log: logged(before, did, today(), forDay), doneAt: Date.now(), snoozedUntil: null };
   put("items", after);
   for (const s of steps) put("items", { ...s, status: "open", doneAt: null });
   const r = repeatState(after);
   const rule = after.repeat!;
   const unit = rule.every === 1 ? `a ${rule.unit}` : `${rule.every} ${rule.unit}s`;
-  const next = r?.next ? `next ${dayLabel(r.next)}` : `back in about ${unit}`;
-  showToast(`${did === "done" ? "Done" : "Skipped"}: ${before.title}${next ? ` · ${next}` : ""}`, {
+  const next = !r?.next ? `back in about ${unit}` : r.due ? `${r.next === today() ? "today's" : `${dayLabel(r.next)}'s`} still to do` : `next ${dayLabel(r.next)}`;
+  const word = did === "done" ? "Done" : "Skipped";
+  showToast(`${forDay ? `${word} for ${dayLabel(forDay)}` : word}: ${before.title} · ${next}`, {
     label: "Undo",
     run: () => {
       update(before.id, { log: before.log, doneAt: before.doneAt, snoozedUntil: before.snoozedUntil });
       for (const s of steps) update(s.id, { status: s.status, doneAt: s.doneAt });
+      undoToo?.();
     },
   });
 }
@@ -111,7 +135,8 @@ export function setLastDone(id: Id, day: string | null) {
   const i = latest(id);
   if (!i) return;
   if (!day) return update(id, { log: [] });
-  const log = i.log.length ? [...i.log.slice(0, -1), { ...i.log.at(-1)!, day }] : [{ day, did: "done" as const }];
+  // Set by hand, it counts for that day (no "for").
+  const log = i.log.length ? [...i.log.slice(0, -1), { did: i.log.at(-1)!.did, day }] : [{ day, did: "done" as const }];
   update(id, { log: log.sort((a, b) => a.day.localeCompare(b.day)) });
 }
 
